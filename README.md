@@ -4,6 +4,20 @@
 >
 > An interactive 3D teardown workbench built with three.js — exploded views, live sectioning, and studio-grade rendering that aims for product-photography realism rather than wireframe aesthetics.
 
+### 🔗 在线演示 / Live demo
+
+**https://leo-bone.github.io/teardown-atelier/**
+
+推送到 `main` 即自动部署（GitHub Actions → Pages）。带参深链接：
+
+| 链接 | 效果 |
+|---|---|
+| [`?subject=starship`](https://leo-bone.github.io/teardown-atelier/?subject=starship) | 直接打开星舰 |
+| [`?subject=rubin`](https://leo-bone.github.io/teardown-atelier/?subject=rubin) | 直接打开 Rubin 芯片 |
+| [`?explode=100`](https://leo-bone.github.io/teardown-atelier/?explode=100) | 一进来就是完全爆炸态 |
+| [`?section=x&explode=60`](https://leo-bone.github.io/teardown-atelier/?section=x&explode=60) | X 轴剖切 + 60% 爆炸 |
+| [`?photo=0`](https://leo-bone.github.io/teardown-atelier/?photo=0) | 素图模式（关景深/辉光/影调，更流畅） |
+
 ![iPhone 18 Pro](docs/iphone18.jpg)
 
 ## 四个主体
