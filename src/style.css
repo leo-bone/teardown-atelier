@@ -37,11 +37,12 @@ body {
 
 /* ---------- 顶栏 ---------- */
 #topbar {
+  position: relative; z-index: 20;
   display: flex; align-items: center; gap: 18px;
   height: 54px; padding: 0 18px;
   background: linear-gradient(180deg, #14181d, #0e1115);
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0; z-index: 20;
+  flex-shrink: 0;
 }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
