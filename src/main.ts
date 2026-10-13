@@ -17,6 +17,8 @@ const SWATCH: Record<string, string> = {
 
 const viewport = document.getElementById('viewport') as HTMLElement;
 const labels = document.getElementById('labels') as HTMLDivElement;
+const stage = document.getElementById('stage') as HTMLElement;
+const loading = document.getElementById('loading') as HTMLElement | null;
 
 let current: Subject;
 let activeLayerId: string | null = null;
@@ -169,10 +171,12 @@ function loadSubject(id: string) {
   current = s;
   activeLayerId = null;
   hideCard();
+  // 渐入切换：先把视口淡出，装载完新主体后再淡入，读起来是平滑过渡而非硬切
+  stage.classList.add('pre-load');
   viewer.load(s);
   viewer.setLabelMode('dot');
   const lb = document.getElementById('btn-labels') as HTMLElement;
-  lb.textContent = '标注：点';
+  (lb.querySelector('.btn-txt') as HTMLElement).textContent = '标注';
   lb.classList.add('on');
   renderInfo(s);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
@@ -180,7 +184,19 @@ function loadSubject(id: string) {
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('active', 'solo'));
   document.querySelectorAll('.section-tools .toggle').forEach((b) => b.classList.remove('on'));
   document.querySelector('[data-sec="off"]')?.classList.add('on');
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => stage.classList.remove('pre-load'))
+  );
 }
+
+/** 首帧渲染完成后淡出加载遮罩（多重保险：rAF 链 + 超时兜底） */
+function hideLoading() {
+  loading?.classList.add('hide');
+}
+requestAnimationFrame(() =>
+  requestAnimationFrame(() => requestAnimationFrame(hideLoading))
+);
+setTimeout(hideLoading, 1500);
 
 // ---------- 层选择 + 信息卡 ----------
 function selectLayer(layerId: string, focus: boolean) {
@@ -247,7 +263,7 @@ document.getElementById('btn-photo')!.addEventListener('click', (ev) => {
   const btn = ev.currentTarget as HTMLElement;
   const next = !viewer.getPhotoGrade();
   viewer.setPhotoGrade(next);
-  btn.textContent = next ? '影调：摄影棚' : '影调：素图';
+  (btn.querySelector('.btn-txt') as HTMLElement).textContent = next ? '影调' : '素图';
   btn.classList.toggle('on', next);
 });
 
@@ -278,7 +294,8 @@ document.getElementById('btn-labels')!.addEventListener('click', (ev) => {
   const cur = order.indexOf(viewer.getLabelMode());
   const next = order[(cur + 1) % order.length];
   viewer.setLabelMode(next);
-  btn.textContent = { dot: '标注：点', full: '标注：全', none: '标注：关' }[next];
+  (btn.querySelector('.btn-txt') as HTMLElement).textContent =
+    { dot: '标注', full: '全显', none: '隐藏' }[next];
   btn.classList.toggle('on', next !== 'none');
 });
 
@@ -329,6 +346,6 @@ if (secRaw !== null) {
 if (params.get('photo') === '0') {
   viewer.setPhotoGrade(false);
   const pb = document.getElementById('btn-photo') as HTMLElement;
-  pb.textContent = '影调：素图';
+  (pb.querySelector('.btn-txt') as HTMLElement).textContent = '素图';
   pb.classList.remove('on');
 }

@@ -110,7 +110,7 @@ export class TeardownViewer {
     // PBR Neutral：Khronos 给产品可视化做的色调映射，高光滚降接近真实相机，
     // 不会像 ACES 那样把金属高光压成橙色
     this.renderer.toneMapping = THREE.NeutralToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
@@ -133,13 +133,13 @@ export class TeardownViewer {
     // 只让远处背景与爆炸开的远端层轻微化开——这是"照片感"最直接的一处
     this.bokehPass = new BokehPass(this.scene, this.camera, {
       focus: 20,
-      aperture: 0.0014,
-      maxblur: 0.018,
+      aperture: 0.0016,
+      maxblur: 0.021,
     });
     this.composer.addPass(this.bokehPass);
 
     // 高光溢出：阈值拉高，只让金属/玻璃上的亮斑轻微晕开
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.11, 0.55, 0.86);
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.16, 0.6, 0.9);
     this.composer.addPass(this.bloomPass);
 
     this.composer.addPass(new OutputPass());
@@ -197,6 +197,7 @@ export class TeardownViewer {
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.0006;
     key.shadow.normalBias = 0.02;
+    key.shadow.radius = 4;
     this.scene.add(key);
     this.keyLight = key;
     // target 加进场景图，位置变化才会被自动更新
@@ -235,10 +236,10 @@ export class TeardownViewer {
         tDiffuse: { value: null as THREE.Texture | null },
         uResolution: { value: new THREE.Vector2(w, h) },
         uTime: { value: 0 },
-        uVignette: { value: 0.3 },
-        uGrain: { value: 0.016 },
-        uChroma: { value: 0.0016 },
-        uContrast: { value: 0.22 },
+        uVignette: { value: 0.26 },
+        uGrain: { value: 0.013 },
+        uChroma: { value: 0.0013 },
+        uContrast: { value: 0.2 },
       },
       vertexShader: /* glsl */ `
         varying vec2 vUv;

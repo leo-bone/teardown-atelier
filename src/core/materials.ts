@@ -130,15 +130,15 @@ export function steelMaterial(color = 0xc4c9ce): THREE.MeshPhysicalMaterial {
   const m = new THREE.MeshPhysicalMaterial({
     color,
     map: brushedTexture(),
-    metalness: 0.98,
-    roughness: 0.26,
+    metalness: 1.0,
+    roughness: 0.28,
     bumpMap: brushedTexture(),
     bumpScale: 0.004,
-    envMapIntensity: 1.6,
-    anisotropy: 0.55,
+    envMapIntensity: 1.85,
+    anisotropy: 0.7,
     anisotropyRotation: Math.PI * 0.5,
-    clearcoat: 0.25,
-    clearcoatRoughness: 0.18,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.14,
   });
   cache.set(key, m);
   return m;
@@ -164,8 +164,10 @@ export function panelGlassMaterial(color = 0x141a22, opacity = 0.94): THREE.Mesh
     transparent: true,
     opacity,
     clearcoat: 1,
-    clearcoatRoughness: 0.055,
-    envMapIntensity: 1.45,
+    clearcoatRoughness: 0.038,
+    envMapIntensity: 1.6,
+    ior: 1.5,
+    specularIntensity: 1,
     side: THREE.FrontSide,
   });
   cache.set(key, m);

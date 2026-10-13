@@ -304,6 +304,90 @@ export function scorchTexture(): THREE.Texture {
 }
 
 // ---------------------------------------------------------------------------
+// 影棚背景 / 接地（摄影棚无缝罩 cove + 接触阴影）
+// ---------------------------------------------------------------------------
+
+/**
+ * 无缝影棚罩（infinity cove）渐变贴图。
+ *
+ * 真实产品摄影在一个"地板 + 圆角转角 + 背墙"一体成型的无缝罩里拍，
+ * 肉眼看不到任何接缝。这里沿剖面（v 从地板远端 → 转角 → 背墙顶端）做一道
+ * 极轻微的冷暖渐变：地板略亮暖、背墙略冷暗，转角处几乎无差，
+ * 让曲面过渡在视觉上"消失"。
+ */
+export function coveTexture(): THREE.Texture {
+  if (!HAS_DOM) return placeholderTexture();
+  return cached('cove', () => {
+    const W = 8, H = 512;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d')!;
+    // 画布原点在左上；UV v=0 对应地板远端，v=1 对应背墙顶端。
+    const g = ctx.createLinearGradient(0, H, 0, 0);
+    g.addColorStop(0.00, '#f7f9fb'); // 地板远端
+    g.addColorStop(0.40, '#f2f5f9'); // 地板近端（主体落点，最亮）
+    g.addColorStop(0.50, '#eef1f5'); // 圆角转角，极淡过渡
+    g.addColorStop(0.64, '#e8edf2'); // 背墙下部
+    g.addColorStop(1.00, '#dde4ec'); // 背墙上部，略冷暗
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // 极淡噪点，避免大面积渐变出现色带
+    const img = ctx.getImageData(0, 0, W, H);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 3;
+      d[i] += n; d[i + 1] += n; d[i + 2] += n;
+    }
+    ctx.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
+/** 接触阴影：径向柔边暗斑，用来把主体"按"在地面上（柔和的 AO 接地感） */
+export function contactShadowTexture(): THREE.Texture {
+  if (!HAS_DOM) return placeholderTexture();
+  return cached('contactshadow', () => {
+    const S = 256;
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const ctx = c.getContext('2d')!;
+    const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0.0, 'rgba(12,16,22,0.62)');
+    g.addColorStop(0.42, 'rgba(12,16,22,0.36)');
+    g.addColorStop(0.72, 'rgba(12,16,22,0.12)');
+    g.addColorStop(1.0, 'rgba(12,16,22,0.0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, S, S);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
+/** IBL 房间：顶亮底暗的渐变球壳，给金属一个真实的"顶光"反射 */
+export function envRoomTexture(): THREE.Texture {
+  if (!HAS_DOM) return placeholderTexture();
+  return cached('envroom', () => {
+    const W = 16, H = 256;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d')!;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0.0, '#5a626c'); // 顶（亮）
+    g.addColorStop(0.45, '#333a42');
+    g.addColorStop(0.78, '#1b1f25');
+    g.addColorStop(1.0, '#0b0d10'); // 底（暗）
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 影棚环境（IBL 用）贴图
 // ---------------------------------------------------------------------------
 
@@ -340,7 +424,7 @@ export function softboxTexture(size = 128, power = 5, core = 0.55): THREE.Textur
   });
 }
 
-/** 背景罩：垂直渐变（顶亮腰中底暗），贴在球体内表面 */
+/** 背景罩：与无缝罩同色系，用户大幅拉远/穿出罩外时兜底，不会突然变黑 */
 export function domeTexture(): THREE.Texture {
   if (!HAS_DOM) return placeholderTexture();
   return cached('dome', () => {
@@ -349,10 +433,10 @@ export function domeTexture(): THREE.Texture {
     c.width = W; c.height = H;
     const ctx = c.getContext('2d')!;
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0.0, '#fdfdfe');
-    g.addColorStop(0.55, '#eff3f7');
-    g.addColorStop(0.78, '#e4eaf0');
-    g.addColorStop(1.0, '#d7dee6');
+    g.addColorStop(0.0, '#eef2f6');
+    g.addColorStop(0.55, '#e7ecf2');
+    g.addColorStop(0.78, '#e0e6ee');
+    g.addColorStop(1.0, '#dde4ec');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     const t = new THREE.CanvasTexture(c);
@@ -370,10 +454,10 @@ export function domeEquirectTexture(): THREE.Texture {
     c.width = W; c.height = H;
     const ctx = c.getContext('2d')!;
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0.0, '#fdfdfe');
-    g.addColorStop(0.55, '#eff3f7');
-    g.addColorStop(0.78, '#e4eaf0');
-    g.addColorStop(1.0, '#d7dee6');
+    g.addColorStop(0.0, '#eef2f6');
+    g.addColorStop(0.55, '#e7ecf2');
+    g.addColorStop(0.78, '#e0e6ee');
+    g.addColorStop(1.0, '#dde4ec');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     const t = new THREE.CanvasTexture(c);

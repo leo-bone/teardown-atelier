@@ -1,19 +1,19 @@
 import * as THREE from 'three';
-import { softboxTexture, domeTexture, groundTexture } from './textures';
+import { softboxTexture, coveTexture, contactShadowTexture, envRoomTexture } from './textures';
 
 /**
  * 影棚环境与背景。
  *
  * 分两部分：
  *
- * 1. `createStudioEnvironment()` —— 搭一个"黑房 + 柔光箱阵列"的小场景，
+ * 1. `createStudioEnvironment()` —— 搭一个"渐变房间 + 柔光箱阵列"的小场景，
  *    用 PMREM 烘焙成 IBL 环境贴图。产品摄影的质感来自大面积柔光箱在
- *    金属与玻璃上投出的**矩形柔和高光条**；RoomEnvironment 那种普通房间
- *    给的是杂散窗光，观感更像"3D 默认渲染"而不是影棚。
+ *    金属与玻璃上投出的**矩形柔和高光条**；而渐变房间（顶亮底暗）让金属
+ *    表面获得一个真实的"顶光"反射，比纯色房间更像真实影棚。
  *
- * 2. `createStudio()` —— 球形渐变背景罩 + 地台 + 参考网格，组成一个组。
- *    球罩半径与地台半径相同且球心落在地台上，两者在赤道处严丝合缝，
- *    看不到背景与地面的接缝。整体按主体尺寸缩放/定位。
+ * 2. `createStudio()` —— 无缝影棚罩（infinity cove：地板 + 圆角转角 + 背墙
+ *    一体成型，无可见接缝）+ 一块软接触阴影，组成一个组。整体按主体尺寸
+ *    缩放/定位，让主体像被"摆"在专业摄影棚里。
  */
 
 interface Softbox {
@@ -35,20 +35,22 @@ interface Softbox {
  */
 const SOFTBOXES: Softbox[] = [
   // 主光：左前上方，大而暖，负责主体绝大部分造型
-  { w: 8.5, h: 10.5, pos: [-9.5, 7.5, 11], tint: [1.0, 0.985, 0.95], gain: 2.3 },
+  { w: 8.5, h: 10.5, pos: [-9.5, 7.5, 11], tint: [1.0, 0.985, 0.95], gain: 2.6 },
   // 补光：右侧更宽更柔，冷白，把暗部细节捞回来但不抢主光
-  { w: 12, h: 14, pos: [12.5, 3.5, 6.5], tint: [0.9, 0.95, 1.0], gain: 0.85 },
+  { w: 12, h: 14, pos: [12.5, 3.5, 6.5], tint: [0.9, 0.95, 1.0], gain: 0.9 },
   // 轮廓光：背后竖条，冷蓝，把主体从背景里"切"出来
-  { w: 3, h: 17, pos: [1.5, 6.5, -14], tint: [0.82, 0.9, 1.0], gain: 1.9 },
+  { w: 3, h: 17, pos: [1.5, 6.5, -14], tint: [0.82, 0.9, 1.0], gain: 2.1 },
   // 顶光：长条顶灯，给水平棱边一道细高光（手机/机身的"亮边"来源）
-  { w: 4, h: 19, pos: [-2.5, 12.5, 1.5], tint: [1, 1, 1], gain: 1.15 },
+  { w: 4, h: 19, pos: [-2.5, 12.5, 1.5], tint: [1, 1, 1], gain: 1.25 },
   // 地面反弹：下方大面板，模拟影棚白色地台的反光，避免阴影面死黑
-  { w: 30, h: 30, pos: [0, -9, 0], tint: [1.0, 0.97, 0.92], gain: 0.5 },
+  { w: 30, h: 30, pos: [0, -9, 0], tint: [1.0, 0.97, 0.92], gain: 0.55 },
   // 前置反光板：左前下方。竖立物体的正面玻璃只会反射"水平线以下"的景物
   // （入射角等于反射角，相机在上方时反射光就指向下），所以正面要亮，
   // 必须在下面放一块板——这是影棚给手机/手表拍正面时的标准做法。
   // 位置要卡在正面法线的镜像方向上，否则玻璃上什么都不会出现。
-  { w: 16, h: 11, pos: [-12, -6, 13], tint: [1.0, 0.99, 0.97], gain: 1.5 },
+  { w: 16, h: 11, pos: [-12, -6, 13], tint: [1.0, 0.99, 0.97], gain: 1.6 },
+  // 侧踢光：右侧细条，给机身侧棱补一道轮廓，避免右侧发闷
+  { w: 2.5, h: 14, pos: [13, 5, -4], tint: [0.95, 0.97, 1.0], gain: 1.4 },
 ];
 
 /** 主光在世界坐标中的位置（与 SOFTBOXES[0] 同方向） */
@@ -56,21 +58,19 @@ export const KEY_LIGHT_POS = new THREE.Vector3(-9.5, 7.5, 11);
 export const FILL_LIGHT_POS = new THREE.Vector3(12.5, 3.5, 6.5);
 export const RIM_LIGHT_POS = new THREE.Vector3(1.5, 6.5, -14);
 
-/** 房间内表面的线性亮度（暗灰墙，提供环境底光） */
-const ROOM_LEVEL = 0.1;
-
 /**
  * 烘焙影棚 IBL。返回环境贴图；调用方负责 `scene.environment = tex`。
  */
 export function createStudioEnvironment(pmrem: THREE.PMREMGenerator): THREE.Texture {
   const scene = new THREE.Scene();
 
-  // 房间：内表面深灰。尺寸要足够大，装下所有柔光箱且不穿墙
+  // 房间：顶亮底暗的渐变球壳。尺寸要足够大，装下所有柔光箱且不穿墙。
+  // 它给金属一个真实的"顶光"反射，是 IBL 里最容易被忽略、却最提真实感的一层。
   const room = new THREE.Mesh(
-    new THREE.BoxGeometry(64, 44, 64),
+    new THREE.SphereGeometry(40, 48, 32),
     new THREE.MeshBasicMaterial({
       side: THREE.BackSide,
-      color: new THREE.Color().setRGB(ROOM_LEVEL, ROOM_LEVEL * 1.04, ROOM_LEVEL * 1.12),
+      map: envRoomTexture(),
     })
   );
   scene.add(room);
@@ -110,42 +110,112 @@ export function createStudioEnvironment(pmrem: THREE.PMREMGenerator): THREE.Text
 
 export interface Studio {
   group: THREE.Group;
-  /** 按主体包围盒定位 + 缩放：地台落在主体最低点，球罩半径包住整个拍摄范围 */
+  /** 按主体包围盒定位 + 缩放：地台落在主体最低点，罩半径包住整个拍摄范围 */
   fit(box: THREE.Box3, camDistance: number): void;
   dispose(): void;
 }
 
 /**
- * 影棚背景组。内部几何都按单位半径建模，靠 group.scale 缩放到目标尺寸，
+ * 无缝影棚罩（infinity cove）几何。
+ *
+ * 剖面（y-z 平面）：地板（前后延伸）→ 四分之一圆弧转角 → 竖直背墙，一体成型。
+ * 用一个平滑渐变贴图让转角"消失"，肉眼看不到接缝。UV 的 v 沿剖面从地板远端
+ * 走到背墙顶端，正好对应渐变方向。
+ */
+function buildCove(): THREE.Mesh {
+  const Ff = 1.6; // 地板向相机方向（+z）延伸
+  const Fb = 2.4; // 地板向背墙方向（-z）延伸
+  const R = 0.9; // 转角半径
+  const W = 3.4; // 背墙高度
+  const L = 4.0; // 宽度（沿 x）
+  const A = 28; // 转角细分
+
+  // 剖面采样点 [y, z]
+  const prof: [number, number][] = [];
+  const floorSteps = 6;
+  for (let i = 0; i <= floorSteps; i++) {
+    const t = i / floorSteps;
+    prof.push([0, Ff + (-Fb - Ff) * t]); // 从 +Ff 到 -Fb
+  }
+  for (let k = 1; k <= A; k++) {
+    const th = (k / A) * (Math.PI / 2);
+    prof.push([R * Math.sin(th), -R + R * Math.cos(th)]);
+  }
+  const wallSteps = 6;
+  for (let i = 1; i <= wallSteps; i++) {
+    prof.push([R + W * (i / wallSteps), -R]);
+  }
+
+  const rows = prof.length;
+  const cols = 56;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  for (let i = 0; i < rows; i++) {
+    const [y, z] = prof[i];
+    for (let j = 0; j < cols; j++) {
+      const x = -L / 2 + L * (j / (cols - 1));
+      positions.push(x, y, z);
+      uvs.push(j / (cols - 1), i / (rows - 1));
+    }
+  }
+  // 缠绕方向保证法线指向罩内（朝向主体/相机）：地板法线 +y，背墙法线 +z
+  for (let i = 0; i < rows - 1; i++) {
+    for (let j = 0; j < cols - 1; j++) {
+      const a = i * cols + j;
+      const b = a + 1;
+      const c = a + cols;
+      const d = c + 1;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const m = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({
+      map: coveTexture(),
+      color: 0xffffff,
+      side: THREE.FrontSide,
+      toneMapped: true,
+    })
+  );
+  m.name = 'cove';
+  return m;
+}
+
+/**
+ * 影棚背景组。内部几何都按单位尺寸建模，靠 group.scale 缩放到目标尺寸，
  * 这样四个尺寸差了一两个数量级的主体（芯片 / 手机 / 无人机 / 火箭）能共用一套。
  */
 export function createStudio(): Studio {
   const group = new THREE.Group();
   group.name = 'studio';
 
-  // 球形背景罩（BackSide 看内壁），球心位于地台平面
-  const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 48, 32),
-    new THREE.MeshBasicMaterial({ map: domeTexture(), side: THREE.BackSide })
-  );
-  dome.name = 'backdrop';
-  group.add(dome);
+  const cove = buildCove();
+  group.add(cove);
 
-  // 地台：与球罩同半径，赤道处完全重合
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 96),
-    new THREE.MeshStandardMaterial({
-      map: groundTexture(),
-      color: 0xffffff,
-      roughness: 0.68,
-      metalness: 0.03,
-      envMapIntensity: 0.9,
+  // 接触阴影：地面上一块软径向暗斑，把主体"按"在地面上（柔和 AO 接地感）。
+  // 用 MeshBasic（不吃光）保证阴影浓淡稳定，blend 在罩面之上。
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: contactShadowTexture(),
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.82,
     })
   );
-  ground.name = 'studio-ground';
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  group.add(ground);
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.001;
+  shadow.renderOrder = 2;
+  shadow.name = 'contact-shadow';
+  group.add(shadow);
 
   return {
     group,
@@ -154,15 +224,21 @@ export function createStudio(): Studio {
       const center = box.getCenter(new THREE.Vector3());
       const extent = Math.max(size.x, size.y, size.z);
       // 半径要同时满足：包住主体、包住相机到主体的距离（否则相机会穿到罩外）
-      const r = Math.max(extent * 3.2, camDistance * 1.9, 18);
+      const r = Math.max(extent * 3.2, camDistance * 1.7, 14);
       group.position.set(center.x, box.min.y - 0.004, center.z);
       group.scale.setScalar(r);
+
+      // 接触阴影大小随主体脚印（×1.9，略大于主体以获得自然衰减）
+      const footprint = Math.max(size.x, size.z) * 0.5;
+      const s = (footprint * 1.9) / r;
+      shadow.scale.set(s, s, s);
+      shadow.position.set(0, 0.001, 0);
     },
     dispose() {
-      dome.geometry.dispose();
-      (dome.material as THREE.Material).dispose();
-      ground.geometry.dispose();
-      (ground.material as THREE.Material).dispose();
+      (cove.geometry as THREE.BufferGeometry).dispose();
+      (cove.material as THREE.Material).dispose();
+      (shadow.geometry as THREE.BufferGeometry).dispose();
+      (shadow.material as THREE.Material).dispose();
     },
   };
 }

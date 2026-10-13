@@ -18,8 +18,6 @@
 | [`?section=x&explode=60`](https://leo-bone.github.io/teardown-atelier/?section=x&explode=60) | X 轴剖切 + 60% 爆炸 |
 | [`?photo=0`](https://leo-bone.github.io/teardown-atelier/?photo=0) | 素图模式（关景深/辉光/影调，更流畅） |
 
-![iPhone 18 Pro](docs/iphone18.jpg)
-
 ## 四个主体
 
 | 主体 | 层数 | 网格 | 三角面 | 关键结构 |
@@ -31,8 +29,6 @@
 
 每个主体带热点标注：点一下展开该层的工程说明与关键参数。
 
-![爆炸视图](docs/exploded.jpg)
-
 ## 功能
 
 - **拆解滑块** — 0–100% 连续爆炸，每层有独立的方向与距离
@@ -42,21 +38,21 @@
 - **导出 PNG** — 2× 超采样渲染后下载
 - **URL 深链接** — `?subject=starship&explode=60&section=x&photo=0`
 
-![剖切](docs/section.jpg)
-
 ## 渲染：为什么它看起来像照片
 
 这一部分是项目的重点。默认的 three.js 渲染（一个平行光 + 一个环境贴图）出来的是"3D 默认渲染"味，本项目按影棚逻辑重搭了整条链路：
 
-**环境光照（IBL）** — 不用 `RoomEnvironment`，而是搭一个"黑房 + 6 块柔光箱"的小场景，用 `PMREMGenerator` 烘焙成环境贴图。产品摄影的质感来自大面积柔光箱在金属与玻璃上投出的**矩形柔和高光条**；柔光箱光斑是解析生成的超椭圆衰减贴图，`MeshBasicMaterial.color` 用 `setRGB(gain, …)` 给到 1 以上（PMREM 期间 three 会强制关闭色调映射，半浮点目标留得住 >1 的亮度）。
+**环境光照（IBL）** — 不用 `RoomEnvironment`，而是搭一个"渐变房间（顶亮底暗）+ 6 块柔光箱"的小场景，用 `PMREMGenerator` 烘焙成环境贴图。产品摄影的质感来自大面积柔光箱在金属与玻璃上投出的**矩形柔和高光条**；渐变房间给金属一个真实的"顶光"反射，比纯色房间更像真影棚。柔光箱光斑是解析生成的超椭圆衰减贴图，`MeshBasicMaterial.color` 用 `setRGB(gain, …)` 给到 1 以上（PMREM 期间 three 会强制关闭色调映射，半浮点目标留得住 >1 的亮度）。
 
 **其中有一块是"正面反光板"** — 竖立物体的正面玻璃只会反射**水平线以下**的景物（入射角等于反射角，相机在上方时反射光必然指向下）。所有灯都放在上方的话，手机正面就是一团纯黑。影棚给手机拍正面的标准做法是在玻璃下方放一块白板，位置要卡在正面法线的镜像方向上。加上它之后 iPhone 正面平均亮度从 27 提升到 88。
 
-**灯光** — 3 个 `RectAreaLight` 与 IBL 柔光箱同坐标摆放，保证"看到的反射"和"投出的阴影"是同一盏灯；平行光只负责投影，阴影相机按主体包围盒自适应拟合。
+**无缝影棚罩（infinity cove）** — 背景不是"球罩 + 地台"的拼缝做法，而是一体成型的地板 + 圆角转角 + 背墙，用一道极轻的冷暖渐变让转角"消失"，肉眼看不到接缝——这就是产品摄影里那种无限延伸的白色棚。地面再叠一块软径向暗斑（接触阴影），把主体"按"在地面上，获得柔和的接地 AO 感，而不是悬空漂浮。
+
+**灯光** — 3 个 `RectAreaLight` 与 IBL 柔光箱同坐标摆放，保证"看到的反射"和"投出的阴影"是同一盏灯；平行光只负责投影（半径 4 的软阴影），阴影相机按主体包围盒自适应拟合。
 
 **后期链** — `Render → Bokeh 景深 → UnrealBloom → Output(Neutral 色调映射) → 自写 PhotoGrade(暗角/颗粒/色差/S曲线) → SMAA`。景深焦点每帧锁在轨道中心。PhotoGrade 放在 OutputPass **之后**——颗粒和暗角本来就该在 sRGB 显示域加，跟相机成像链路一致。
 
-**材质** — 拉丝金属用 `MeshPhysicalMaterial.anisotropy`（各项同性高光会把金属抹成塑料感）；手机前后盖是深色高 clearcoat 面板而不是 `transmission 0.92` 的透射玻璃——真实手机前后不透光，靠反射成像。
+**材质** — 拉丝金属用 `MeshPhysicalMaterial.anisotropy`（各项同性高光会把金属抹成塑料感），并叠一层清漆（clearcoat）模拟抛光层；手机前后盖是深色高 clearcoat 面板而不是 `transmission 0.92` 的透射玻璃——真实手机前后不透光，靠反射成像。
 
 **「影调：素图」不只是关滤镜** — `BokehPass` 会用 `MeshDepthMaterial` 把整个场景再渲染一遍取深度，关掉它省掉的是双倍绘制调用。星舰 652 个网格时这一遍很贵。
 
@@ -93,10 +89,10 @@ npm run preview    # 预览构建产物
 ```
 src/
   core/
-    studio.ts        # 影棚 IBL + 球形渐变背景罩 + 地台
+    studio.ts        # 影棚 IBL（渐变房间 + 柔光箱）+ 无缝影棚罩(cove) + 接触阴影
     viewer.ts        # 场景、灯光、后期链、交互、拾取
     materials.ts     # 统一材质库（各向异性金属、深色面板、透射玻璃…）
-    textures.ts      # 程序化 Canvas 贴图（PCB/拉丝/碳纤维/晶圆/柔光箱/背景罩）
+    textures.ts      # 程序化 Canvas 贴图（PCB/拉丝/碳纤维/晶圆/柔光箱/cove/接触阴影）
     types.ts
   subjects/
     iphone18.ts  rubin.ts  starship.ts  mavic4.ts
