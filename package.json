@@ -1,0 +1,31 @@
+{
+  "name": "teardown-atelier",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.169.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "description": "交互式 3D 拆解工坊：爆炸视图 / 实时剖切 / 影棚级渲染",
+  "keywords": [
+    "threejs",
+    "webgl",
+    "3d",
+    "teardown",
+    "exploded-view",
+    "product-visualization",
+    "section-view"
+  ],
+  "license": "MIT"
+}

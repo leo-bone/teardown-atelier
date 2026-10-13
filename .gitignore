@@ -1,0 +1,18 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.vite/
+
+# 日志与系统文件
+*.log
+npm-debug.log*
+.DS_Store
+
+# TypeScript / Vite 缓存
+*.tsbuildinfo
+*.timestamp-*.mjs
+
+# 编辑器
+.idea/
+.vscode/
+*.swp

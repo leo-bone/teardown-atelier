@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teardown Atelier · 工程级 3D 拆解工坊</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- 顶栏 -->
+      <header id="topbar">
+        <div class="brand">
+          <span class="brand-mark">TA</span>
+          <div class="brand-text">
+            <strong>Teardown Atelier</strong>
+            <span>工程级 3D 拆解工坊</span>
+          </div>
+        </div>
+        <nav id="tabs"></nav>
+        <div class="topbar-right">
+          <span class="badge">参数化重建 · 非真机扫描</span>
+        </div>
+      </header>
+
+      <div id="body">
+        <!-- 左栏：主体信息 + 层列表 -->
+        <aside id="sidebar">
+          <section class="panel intro">
+            <h1 id="s-name"></h1>
+            <p id="s-sub" class="muted"></p>
+            <p id="s-tagline" class="tagline"></p>
+            <div id="s-headline" class="headline"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>结构层</h2>
+              <button id="btn-show-all" class="mini">全显</button>
+            </div>
+            <div id="layer-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>规格</h2></div>
+            <table id="spec-table"></table>
+          </section>
+        </aside>
+
+        <!-- 中间：3D 视口 -->
+        <main id="stage">
+          <div id="viewport"></div>
+          <div id="labels"></div>
+
+          <!-- 底部工具条 -->
+          <div id="toolbar">
+            <div class="tool-group">
+              <label>拆解程度</label>
+              <input type="range" id="explode" min="0" max="100" value="0" />
+              <span id="explode-val" class="mono">0%</span>
+            </div>
+            <div class="tool-group" id="section-tools">
+              <label>剖切</label>
+              <button class="mini toggle" data-sec="off">关</button>
+              <button class="mini toggle" data-sec="x">X 轴</button>
+              <button class="mini toggle" data-sec="y">Y 轴</button>
+              <button class="mini toggle" data-sec="z">Z 轴</button>
+            </div>
+            <div class="tool-group">
+              <button id="btn-photo" class="mini toggle on">影调：摄影棚</button>
+              <button id="btn-labels" class="mini toggle on">标注：点</button>
+              <button id="btn-shot" class="mini">导出 PNG</button>
+              <button id="btn-reset" class="mini">复位视角</button>
+            </div>
+          </div>
+
+          <!-- 悬浮信息卡 -->
+          <div id="hotcard" hidden>
+            <button id="hotcard-close" aria-label="关闭">×</button>
+            <h3 id="hotcard-title"></h3>
+            <div id="hotcard-body"></div>
+            <div id="hotcard-stats"></div>
+          </div>
+        </main>
+
+        <!-- 右栏：叙事 + 对比 -->
+        <aside id="inspector">
+          <section class="panel">
+            <div class="panel-head"><h2>概述</h2></div>
+            <div id="s-overview" class="prose"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>设计解读</h2></div>
+            <div id="s-narrative" class="prose"></div>
+          </section>
+          <section class="panel" id="fidelity-panel">
+            <div class="panel-head"><h2>建模颗粒度</h2></div>
+            <div class="fid-grid">
+              <div class="fid-cell">
+                <span class="fid-num" id="fid-actual"></span>
+                <span class="fid-cap">真实零件量</span>
+              </div>
+              <div class="fid-cell">
+                <span class="fid-num" id="fid-modeled"></span>
+                <span class="fid-cap">模型几何体</span>
+              </div>
+            </div>
+            <p class="fid-src" id="fid-source"></p>
+            <p class="fid-note" id="fid-note"></p>
+          </section>
+          <section class="panel" id="compare-panel">
+            <div class="panel-head"><h2 id="cmp-title"></h2></div>
+            <p id="cmp-note" class="muted small"></p>
+            <div id="cmp-rows"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
