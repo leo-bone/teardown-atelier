@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 import { softboxTexture, coveTexture, contactShadowTexture, envRoomTexture } from './textures';
 
 /**
@@ -57,6 +58,60 @@ const SOFTBOXES: Softbox[] = [
 export const KEY_LIGHT_POS = new THREE.Vector3(-9.5, 7.5, 11);
 export const FILL_LIGHT_POS = new THREE.Vector3(12.5, 3.5, 6.5);
 export const RIM_LIGHT_POS = new THREE.Vector3(1.5, 6.5, -14);
+
+/**
+ * 带径向淡出的反光地台着色器。
+ *
+ * 标准 Reflector 是一块"硬边镜子"——边缘直接截断，放在产品下面会露出一圈
+ * 突兀的圆形亮边，看着像廉价 demo。这里在顶点里额外传一份平面 UV（vPlaneUv），
+ * 片元里按到圆心的距离做 smoothstep 淡出：正中心保留最强反射，边缘渐隐到 0，
+ * 无缝融进影棚罩地面。
+ *
+ * 注意：刻意**不**包含 tonemapping/colorspace 的 fragment include——
+ * 整个画面最后由 EffectComposer 的 OutputPass 统一做一次色调映射，
+ * 反射贴图里只存线性 HDR 颜色，否则会被二次色调映射压暗。
+ */
+const REFLECTOR_FADE_SHADER = {
+  name: 'ReflectorFade',
+  uniforms: {
+    color: { value: null as THREE.Color | null },
+    tDiffuse: { value: null as THREE.Texture | null },
+    textureMatrix: { value: null as THREE.Matrix4 | null },
+    uFade: { value: 0.55 },
+  },
+  vertexShader: /* glsl */ `
+    uniform mat4 textureMatrix;
+    varying vec4 vUv;
+    varying vec2 vPlaneUv;
+    #include <common>
+    void main() {
+      vUv = textureMatrix * vec4( position, 1.0 );
+      vPlaneUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform vec3 color;
+    uniform sampler2D tDiffuse;
+    uniform float uFade;
+    varying vec4 vUv;
+    varying vec2 vPlaneUv;
+    float blendOverlay( float b, float l ) {
+      return b < 0.5 ? ( 2.0 * b * l ) : ( 1.0 - 2.0 * ( 1.0 - b ) * ( 1.0 - l ) );
+    }
+    vec3 blendOverlay( vec3 b, vec3 l ) {
+      return vec3( blendOverlay( b.r, l.r ), blendOverlay( b.g, l.g ), blendOverlay( b.b, l.b ) );
+    }
+    void main() {
+      vec4 base = texture2DProj( tDiffuse, vUv );
+      vec3 col = blendOverlay( base.rgb, color );
+      // 正中心 d=0 反射最强，边缘 d=1 渐隐
+      float d = length( vPlaneUv - 0.5 ) * 2.0;
+      float fade = 1.0 - smoothstep( 0.42, 0.96, d );
+      gl_FragColor = vec4( col, fade * uFade );
+    }
+  `,
+};
 
 /**
  * 烘焙影棚 IBL。返回环境贴图；调用方负责 `scene.environment = tex`。
@@ -200,6 +255,25 @@ export function createStudio(): Studio {
   const cove = buildCove();
   group.add(cove);
 
+  // 反光地台：一块带径向淡出的镜像盘，让主体在磨砂白地面上投出一道
+  // 柔和的产品倒影——这是"产品摄影"最标志性的观感之一。
+  // 圆形盘半径=1，靠 group.scale 缩放到主体脚印；位置略高于罩面避免 z-fighting。
+  const reflector = new Reflector(new THREE.CircleGeometry(1, 80), {
+    color: 0x7f7f7f,
+    textureWidth: 1024,
+    textureHeight: 1024,
+    clipBias: 0.003,
+    shader: REFLECTOR_FADE_SHADER,
+  });
+  reflector.rotation.x = -Math.PI / 2;
+  reflector.position.y = 0.004;
+  reflector.renderOrder = 1;
+  reflector.name = 'reflector-floor';
+  const refMat = reflector.material as THREE.ShaderMaterial;
+  refMat.transparent = true;
+  refMat.depthWrite = false;
+  group.add(reflector);
+
   // 接触阴影：地面上一块软径向暗斑，把主体"按"在地面上（柔和 AO 接地感）。
   // 用 MeshBasic（不吃光）保证阴影浓淡稳定，blend 在罩面之上。
   const shadow = new THREE.Mesh(
@@ -208,11 +282,11 @@ export function createStudio(): Studio {
       map: contactShadowTexture(),
       transparent: true,
       depthWrite: false,
-      opacity: 0.82,
+      opacity: 0.55,
     })
   );
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = 0.001;
+  shadow.position.y = 0.006;
   shadow.renderOrder = 2;
   shadow.name = 'contact-shadow';
   group.add(shadow);
@@ -228,15 +302,21 @@ export function createStudio(): Studio {
       group.position.set(center.x, box.min.y - 0.004, center.z);
       group.scale.setScalar(r);
 
-      // 接触阴影大小随主体脚印（×1.9，略大于主体以获得自然衰减）
+      // 反光盘：半径略大于主体脚印，倒影才不会在边缘被切平
       const footprint = Math.max(size.x, size.z) * 0.5;
+      const rr = (footprint * 2.0) / r;
+      reflector.scale.set(rr, rr, rr);
+      reflector.position.set(0, 0.004, 0);
+
+      // 接触阴影大小随主体脚印（×1.9，略大于主体以获得自然衰减）
       const s = (footprint * 1.9) / r;
       shadow.scale.set(s, s, s);
-      shadow.position.set(0, 0.001, 0);
+      shadow.position.set(0, 0.006, 0);
     },
     dispose() {
       (cove.geometry as THREE.BufferGeometry).dispose();
       (cove.material as THREE.Material).dispose();
+      reflector.dispose();
       (shadow.geometry as THREE.BufferGeometry).dispose();
       (shadow.material as THREE.Material).dispose();
     },

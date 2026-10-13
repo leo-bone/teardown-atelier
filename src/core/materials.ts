@@ -131,14 +131,14 @@ export function steelMaterial(color = 0xc4c9ce): THREE.MeshPhysicalMaterial {
     color,
     map: brushedTexture(),
     metalness: 1.0,
-    roughness: 0.28,
+    roughness: 0.26,
     bumpMap: brushedTexture(),
     bumpScale: 0.004,
-    envMapIntensity: 1.85,
-    anisotropy: 0.7,
+    envMapIntensity: 2.0,
+    anisotropy: 0.72,
     anisotropyRotation: Math.PI * 0.5,
-    clearcoat: 0.35,
-    clearcoatRoughness: 0.14,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.12,
   });
   cache.set(key, m);
   return m;
@@ -160,14 +160,15 @@ export function panelGlassMaterial(color = 0x141a22, opacity = 0.94): THREE.Mesh
     metalness: 0.08,
     //  roughness 0.05 是"镜面玻璃"，高光会缩成一根细线，数码味重。
     //  真实手机玻璃是微绒面，高光摊成一条柔和的宽带——0.12 是这个手感。
-    roughness: 0.12,
+    roughness: 0.11,
     transparent: true,
     opacity,
     clearcoat: 1,
-    clearcoatRoughness: 0.038,
-    envMapIntensity: 1.6,
+    clearcoatRoughness: 0.03,
+    envMapIntensity: 1.8,
     ior: 1.5,
     specularIntensity: 1,
+    specularColor: new THREE.Color(0xffffff),
     side: THREE.FrontSide,
   });
   cache.set(key, m);

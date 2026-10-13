@@ -35,14 +35,46 @@ const viewer = new TeardownViewer(viewport, labels, {
 
 // ---------- 顶栏 tabs ----------
 const tabsEl = document.getElementById('tabs')!;
-SUBJECTS.forEach((s) => {
+SUBJECTS.forEach((s, i) => {
   const b = document.createElement('button');
   b.className = 'tab';
-  b.textContent = s.name;
+  b.innerHTML = `<span class="tab-idx">0${i + 1}</span>${s.name}`;
   b.dataset.id = s.id;
   b.addEventListener('click', () => loadSubject(s.id));
   tabsEl.appendChild(b);
 });
+
+// ---------- 落地选择台 ----------
+const heroEl = document.getElementById('hero') as HTMLElement;
+const heroCards = document.getElementById('hero-cards') as HTMLElement;
+SUBJECTS.forEach((s, i) => {
+  const accent = s.accent ?? '#5b8cff';
+  const card = document.createElement('button');
+  card.className = 'hero-card';
+  card.style.setProperty('--ac', accent);
+  card.innerHTML = `
+    <span class="hc-index">0${i + 1}</span>
+    <span class="hc-thumb"></span>
+    <span class="hc-name">${s.name}</span>
+    <span class="hc-sub">${s.subtitle}</span>
+    <span class="hc-desc">${s.tagline}</span>
+    <span class="hc-cta">查看拆解 →</span>`;
+  card.addEventListener('click', () => {
+    loadSubject(s.id);
+    hideHero();
+  });
+  heroCards.appendChild(card);
+});
+
+function hideHero() {
+  heroEl.classList.add('hidden');
+}
+function showHero() {
+  heroEl.classList.remove('hidden');
+}
+
+document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
+document.getElementById('btn-home')!.addEventListener('click', () => showHero());
 
 // ---------- 渲染主体信息 ----------
 function renderInfo(s: Subject) {
