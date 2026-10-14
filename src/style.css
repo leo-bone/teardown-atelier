@@ -352,6 +352,50 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* ---------- 分步拆解引导条 ---------- */
+#step-rail {
+  position: absolute; bottom: 16px; left: 16px; width: 420px;
+  max-height: min(58%, 520px); overflow-y: auto;
+  background: rgba(16, 19, 23, 0.9); border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px; padding: 16px; z-index: 13;
+  box-shadow: var(--shadow-2); backdrop-filter: blur(16px);
+  animation: slideUp .2s ease;
+}
+#step-rail[hidden] { display: none; }
+.step-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.step-count {
+  font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1;
+  color: var(--text); flex-shrink: 0; min-width: 62px;
+  padding-bottom: 2px;
+}
+.step-count span { font-size: 14px; font-weight: 500; color: var(--text-dim); margin-left: 1px; }
+.step-title-wrap { flex: 1; min-width: 0; padding-right: 4px; }
+.step-kicker {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--accent); margin-bottom: 3px;
+}
+#step-title { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.35; }
+.step-nav { display: flex; gap: 6px; flex-shrink: 0; }
+.step-nav .mini { width: 32px; justify-content: center; padding: 6px 0; font-size: 13px; }
+.step-nav .mini:disabled { opacity: .35; cursor: default; }
+#step-body { font-size: 12px; color: var(--text-mid); line-height: 1.72; }
+#step-body b { color: var(--text); font-weight: 600; }
+.step-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.step-tools[style*="display: none"] { display: none !important; }
+#step-stats {
+  margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid; gap: 5px;
+}
+#step-stats:empty { display: none; }
+.step-dots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+.step-dot {
+  width: 9px; height: 9px; border-radius: 50%; padding: 0;
+  border: 1px solid var(--border-strong); background: transparent;
+  cursor: pointer; transition: all .14s ease;
+}
+.step-dot:hover { background: rgba(255, 255, 255, 0.2); }
+.step-dot.on { background: var(--accent); border-color: var(--accent); transform: scale(1.25); }
+
 /* ---------- 右栏内容 ---------- */
 .prose { font-size: 12px; color: var(--text-mid); line-height: 1.78; }
 .prose p { margin-bottom: 11px; }
@@ -532,6 +576,41 @@ body {
 @media (max-width: 1300px) {
   #body { grid-template-columns: 248px 1fr 296px; }
   #hotcard { width: 300px; }
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1180px) {
+  #body { grid-template-columns: 228px 1fr 268px; }
+  #hotcard, #step-rail { width: 336px; }
+  #play-widget { width: 328px; height: 372px; }
+}
+
+@media (max-width: 980px) {
+  body { overflow: auto; }
+  #app { height: auto; min-height: 100vh; }
+  #topbar { height: auto; flex-wrap: wrap; padding: 10px 12px; gap: 10px; }
+  #tabs { order: 3; width: 100%; overflow-x: auto; padding-bottom: 2px; }
+  #tabs::-webkit-scrollbar { display: none; }
+  .badge { display: none; }
+  #body { display: flex; flex-direction: column; overflow: visible; }
+  #stage { height: 64vh; min-height: 440px; flex-shrink: 0; }
+  #sidebar, #inspector { overflow: visible; }
+  #hero-shot-wrap { padding: 14px; }
+  #hero-shot-cap { left: 14px; bottom: 12px; font-size: 11px; }
+  #play-widget { width: 262px; height: 316px; right: 12px; bottom: 12px; }
+  #hotcard { width: auto; left: 12px; right: 12px; bottom: 12px; max-height: 42%; }
+  #step-rail { width: auto; left: 12px; right: 12px; bottom: 12px; max-height: 50%; }
+  /* 分步条铺满底部时，3D 小窗让位到右上角 */
+  #stage:has(#step-rail:not([hidden])) #play-widget { bottom: auto; top: 12px; }
+  .hero-cards { gap: 12px; }
+  .hero-card { width: 100%; max-width: 320px; }
+}
+
+@media (max-width: 560px) {
+  .brand-text span { display: none; }
+  #play-widget { width: 218px; height: 268px; }
+  .step-count { font-size: 20px; min-width: 48px; }
+  #step-title { font-size: 13.5px; }
 }
 
 /* ---------- iFixit 式可维护性 / 拆解难度 ---------- */

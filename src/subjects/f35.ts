@@ -579,6 +579,85 @@ export function f35LightningII(): Subject {
       note: '按公开技术规格参数化重建，非工程图纸复刻。外形与子系统布局为结构示意，尺寸与参数以 Lockheed Martin 官方 Fast Facts 及公开资料为准。',
     },
     layers,
+    steps: [
+      {
+        id: 's1-safe',
+        title: '断电放油，进入维护安全状态',
+        body: '任何拆解开始前，先断开机上电气、放掉燃油并接地。F-35 的弹射座椅、燃油与液压系统都在高压/高能状态，外场拆机的第一件事是让它"没有能量"，而不是先拧螺丝。',
+        layers: ['fuselage'],
+        tools: ['地面保障电源车', '燃油放泄与接地设备', '座舱弹射座椅安全销'],
+        stats: [
+          { label: '内部燃油', value: '约 8.3 t' },
+          { label: '弹射座椅', value: 'ACES 5 / MBSU' },
+        ],
+      },
+      {
+        id: 's2-canopy',
+        title: '打开气泡座舱盖',
+        body: '松开座舱盖作动筒与锁扣，整块气泡舱盖向上翻开。舱盖是丙烯酸整体件，外场不可修复，任何裂纹或划伤超标都直接换件——这也是 F-35 出勤率最常被卡住的单项之一。',
+        layers: ['canopy'],
+        tools: ['座舱盖作动筒拆装工具', '护垫（防止划伤舱盖）'],
+        stats: [
+          { label: '舱盖材料', value: '丙烯酸整体件' },
+          { label: '维护性', value: '不可外场修复' },
+        ],
+      },
+      {
+        id: 's3-avionics',
+        title: '模块级更换航电 LRU',
+        body: 'APG-81 AESA、EOTS、DAS 全部按"航线可更换单元（LRU）"设计：坏哪个换哪个，不用整机下线。这是五代机把"修"变成"换"的关键思路，也是它与四代机维护理念最大的分界。',
+        layers: ['avionics'],
+        tools: ['ALIS / ODIN 保障终端', 'AESA 模块级更换工装', 'EOTS 窗口清洁套件'],
+        stats: [
+          { label: 'AESA 孔径', value: 'APG-81' },
+          { label: 'DAS 孔径数', value: '6 个' },
+        ],
+      },
+      {
+        id: 's4-bays',
+        title: '开启内置弹舱，卸下挂架',
+        body: '两侧内置弹舱各容纳 2 枚 A IM-9X 级弹药 + 1 枚 2000 lb 级 JDAM。舱门是内埋式，开启顺序和作动筒行程有严格标定，错序会损坏舱门铰链与隐身外形。',
+        layers: ['bays'],
+        tools: ['内埋式舱门校准工装', '弹射发射架拆装设备'],
+        stats: [
+          { label: '弹舱数量', value: '2 个' },
+          { label: '典型挂载', value: '2 × 2000 lb + 2 × AIM-9X' },
+        ],
+      },
+      {
+        id: 's5-wings',
+        title: '更换主翼可更换面板',
+        body: '主翼设计成"盒段 + 可更换蒙皮面板"，外场被碎石或地面设备打伤时，只换受损面板，不必整翼返厂。这是隐身机维持出动率非常实际的一手。',
+        layers: ['wings'],
+        tools: ['蒙皮面板拆装夹具', '扭矩扳手套装'],
+        stats: [
+          { label: '翼面积', value: '42.7 ㎡' },
+          { label: '翼展（A 型）', value: '10.7 m' },
+        ],
+      },
+      {
+        id: 's6-gear',
+        title: '收放起落架，检查轮胎刹车',
+        body: '前轮 + 双主轮都是单轮形式以塞进弹舱。收放作动筒、机轮刹车与轮胎磨损都要按起落次数强制检查，与"寿命件"管理绑定。',
+        layers: ['gear'],
+        tools: ['起落架安全检查设备', '轮胎拆装与氮气充填设备'],
+        stats: [
+          { label: '机轮形式', value: '前 1 + 主 2' },
+          { label: '轮胎压力', value: '氮气充填' },
+        ],
+      },
+      {
+        id: 's7-engine',
+        title: '外场整台更换 F135 发动机',
+        body: '最后一步、也是最重的一步：从后机身把 F135 整台抽出。发动机按"整台更换"设计，外场只做换装不做大修——把深度维修留给后方基地。',
+        layers: ['engine'],
+        tools: ['发动机吊装与支撑工装', '后机身开合设备'],
+        stats: [
+          { label: '军用推力', value: '124 kN' },
+          { label: '加力推力', value: '191 kN' },
+        ],
+      },
+    ],
     headline: [
       { label: '机长', value: '15.7', unit: 'm' },
       { label: '加力推力', value: '191', unit: 'kN' },

@@ -607,6 +607,85 @@ export function mavic4Pro(): Subject {
       note: '本模型按官方手册的部件划分组织，是四个主体中颗粒度最贴近官方口径的。部分部件（辅助灯、起落架天线、状态指示灯、3D 红外检测系统）已合并进对应结构层，未单独拆出。',
     },
     layers,
+    steps: [
+      {
+        id: 's1-battery',
+        title: '先取电池',
+        body: '拆任何东西之前先把智能飞行电池拔掉。95.3Wh 已经超过随身行李 100Wh 的红线边缘，带电拆机既危险也容易烧电调。',
+        layers: ['battery'],
+        tools: ['无（卡扣式快拆）'],
+        stats: [
+          { label: '容量', value: '95.3 Wh' },
+          { label: '安装方式', value: '卡扣快拆' },
+        ],
+      },
+      {
+        id: 's2-motors',
+        title: '卸桨叶，拆四台无刷电机',
+        body: '折叠桨先拆，再卸电机。电机是易损件，摔机后按"换不修"处理——单台成本远低于拆开重绕。',
+        layers: ['motors'],
+        tools: ['桨叶拆装扳手', '电机固定螺丝刀'],
+        stats: [
+          { label: '电机数', value: '4 台无刷' },
+          { label: '桨叶', value: '折叠低噪' },
+        ],
+      },
+      {
+        id: 's3-gimbal',
+        title: '拆三摄万象云台',
+        body: '云台是整个飞机上最精密的模组，三轴增稳 + 三摄共路。拆的时候先断排线再松减震球，硬掰会直接废掉增稳电机。',
+        layers: ['gimbal'],
+        tools: ['精密螺丝刀', '防静电镊子'],
+        stats: [
+          { label: '轴数', value: '三轴' },
+          { label: '摄像头', value: '3 摄共路' },
+        ],
+      },
+      {
+        id: 's4-sensor',
+        title: '取出 1 英寸主摄传感器',
+        body: '云台内部是 1 英寸 CMOS + 镜头组。传感器与镜筒的对位精度要求极高，属于"不可外场维修"件，坏了整组更换。',
+        layers: ['sensor'],
+        tools: ['无尘环境', '光学对准工装'],
+        stats: [
+          { label: '传感器', value: '1 英寸 CMOS' },
+          { label: '维护性', value: '整组更换' },
+        ],
+      },
+      {
+        id: 's5-link',
+        title: '拆 O4+ 图传与全向感知模组',
+        body: '图传板 + 全向避障的视觉/红外孔径都集中在这块。排线密、屏蔽要求高，拆的时候注意别把射频同轴线折死。',
+        layers: ['link'],
+        tools: ['防静电镊子', '射频线压接工具'],
+        stats: [
+          { label: '图传', value: 'O4+' },
+          { label: '感知', value: '全向视觉 + 红外' },
+        ],
+      },
+      {
+        id: 's6-frame',
+        title: '更换碳纤维机臂',
+        body: '机臂是碳纤维折叠结构，摔裂了按"件"换。碳纤维的优点是轻和刚，缺点是坏了不能像不锈钢那样现场焊。',
+        layers: ['frame'],
+        tools: ['碳纤维切割工具', '机臂校准工装'],
+        stats: [
+          { label: '机臂', value: '碳纤维折叠' },
+          { label: '折叠方式', value: '四臂内折' },
+        ],
+      },
+      {
+        id: 's7-remote',
+        title: '遥控器（配件，不在机身上）',
+        body: 'RC 2 是独立配件，但拆解流程里常一起看：屏幕、摇杆、天线与电调遥测都集中在这个折叠遥控器里。',
+        layers: ['remote'],
+        tools: ['精密螺丝刀'],
+        stats: [
+          { label: '型号', value: 'DJI RC 2' },
+          { label: '形式', value: '折叠 + 触屏' },
+        ],
+      },
+    ],
     headline: [
       { label: '主摄', value: '1 亿', unit: '像素 4/3' },
       { label: '续航', value: '51', unit: '分钟' },

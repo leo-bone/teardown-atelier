@@ -1,7 +1,7 @@
 import './style.css';
 import { TeardownViewer } from './core/viewer';
 import { SUBJECTS } from './subjects';
-import type { Subject } from './core/types';
+import type { Subject, TeardownStep } from './core/types';
 
 /** 每层的代表色，用于左栏色块 */
 const SWATCH: Record<string, string> = {
@@ -302,6 +302,8 @@ function loadSubject(id: string) {
   updateShareMeta(s);
   // 图片为主：默认展示整体爆炸大图
   setHero(subjectHero(s.id), `${s.name} · 整体爆炸图`);
+  steps = buildSteps(s);
+  if (stepMode) renderStep(0);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
   (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('active', 'solo'));
@@ -383,6 +385,120 @@ function hideCard() {
 }
 
 document.getElementById('hotcard-close')!.addEventListener('click', hideCard);
+
+// ---------- 分步拆解（iFixit 式 Step 序列） ----------
+let stepMode = false;
+let stepIndex = 0;
+let steps: TeardownStep[] = [];
+
+/** 主体自带 steps 就用；否则按层列表顺序自动生成一套保底步骤 */
+function buildSteps(s: Subject): TeardownStep[] {
+  if (s.steps && s.steps.length) return s.steps;
+  return s.layers.map((l) => ({
+    id: `auto-${l.id}`,
+    title: `拆下 ${l.name}`,
+    body: `${l.group} · ${l.name}。这一层可以在左栏单独显隐、隔离查看，也可以用剖切工具看内部堆叠。`,
+    layers: [l.id],
+  }));
+}
+
+function enterStepMode() {
+  stepMode = true;
+  stepIndex = 0;
+  document.getElementById('step-rail')!.removeAttribute('hidden');
+  document.getElementById('btn-steps')!.classList.add('on');
+  hideCard();
+  renderStep(0);
+}
+
+function exitStepMode() {
+  stepMode = false;
+  document.getElementById('step-rail')!.setAttribute('hidden', '');
+  document.getElementById('btn-steps')!.classList.remove('on');
+  // 恢复全显 + 默认机位
+  current.layers.forEach((l) => {
+    if (viewer.isHidden(l.id)) viewer.toggleLayer(l.id);
+  });
+  viewer.isolate(null);
+  viewer.resetView();
+  document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('solo', 'active', 'hidden-layer'));
+  setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+}
+
+function renderStep(i: number) {
+  if (!steps.length) return;
+  stepIndex = Math.max(0, Math.min(steps.length - 1, i));
+  const st = steps[stepIndex];
+
+  (document.getElementById('step-cur') as HTMLElement).textContent = String(stepIndex + 1);
+  (document.getElementById('step-total') as HTMLElement).textContent = `/${steps.length}`;
+  (document.getElementById('step-title') as HTMLElement).textContent = st.title;
+  (document.getElementById('step-body') as HTMLElement).textContent = st.body;
+
+  const toolsEl = document.getElementById('step-tools')!;
+  const hasTools = !!st.tools?.length;
+  toolsEl.innerHTML = hasTools
+    ? st.tools!.map((t) => `<span class="tool-chip">${t}</span>`).join('')
+    : '';
+  toolsEl.style.display = hasTools ? '' : 'none';
+
+  const statsEl = document.getElementById('step-stats')!;
+  statsEl.innerHTML = (st.stats ?? [])
+    .map((s) => `<div class="stat-row"><span class="k">${s.label}</span><span class="v">${s.value}</span></div>`)
+    .join('');
+
+  const dotsEl = document.getElementById('step-dots')!;
+  dotsEl.innerHTML = steps
+    .map(
+      (s, di) =>
+        `<button class="step-dot${di === stepIndex ? ' on' : ''}" data-i="${di}" title="${s.title}"></button>`
+    )
+    .join('');
+  dotsEl.querySelectorAll<HTMLButtonElement>('.step-dot').forEach((b) =>
+    b.addEventListener('click', () => renderStep(Number(b.dataset.i)))
+  );
+  (document.getElementById('step-prev') as HTMLButtonElement).disabled = stepIndex === 0;
+  (document.getElementById('step-next') as HTMLButtonElement).disabled =
+    stepIndex === steps.length - 1;
+
+  // 3D 小窗：只保留这一步涉及的层；单层时直接隔离
+  const inStep = st.layers.filter((id) => current.layers.some((l) => l.id === id));
+  if (inStep.length === 1) {
+    viewer.isolate(inStep[0]);
+  } else {
+    viewer.isolate(null);
+    current.layers.forEach((l) => {
+      const want = inStep.includes(l.id);
+      if (viewer.isHidden(l.id) !== !want) viewer.toggleLayer(l.id);
+    });
+  }
+  if (inStep[0]) viewer.focusLayer(inStep[0]);
+
+  // 左栏列表同步高亮
+  document.querySelectorAll('.layer-item').forEach((e) => {
+    const id = (e as HTMLElement).dataset.id;
+    e.classList.toggle('active', inStep.includes(id!));
+    e.classList.toggle('solo', inStep.length === 1 && id === inStep[0]);
+    e.classList.toggle('hidden-layer', viewer.isHidden(id!));
+  });
+
+  // 中央大图：取这一步第一个有参考图的层
+  const withRef = inStep
+    .map((id) => current.layers.find((l) => l.id === id))
+    .find((l) => l?.refImage);
+  if (withRef) {
+    setHero(withRef.refImage!, `${withRef.name} · 步骤 ${stepIndex + 1}`);
+  } else {
+    setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+  }
+}
+
+document.getElementById('btn-steps')!.addEventListener('click', () => {
+  if (stepMode) exitStepMode();
+  else enterStepMode();
+});
+document.getElementById('step-prev')!.addEventListener('click', () => renderStep(stepIndex - 1));
+document.getElementById('step-next')!.addEventListener('click', () => renderStep(stepIndex + 1));
 
 // ---------- 工具条 ----------
 const explodeInput = document.getElementById('explode') as HTMLInputElement;
@@ -469,8 +585,11 @@ document.getElementById('pw-toggle')!.addEventListener('click', () => {
 // 键盘快捷
 addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement) return;
-  if (ev.key === 'Escape') hideCard();
+  if (ev.key === 'Escape') { if (stepMode) exitStepMode(); else hideCard(); }
   if (ev.key === 'r' || ev.key === 'R') viewer.resetView();
+  // 分步模式下用左右方向键翻步
+  if (stepMode && ev.key === 'ArrowRight') renderStep(stepIndex + 1);
+  if (stepMode && ev.key === 'ArrowLeft') renderStep(stepIndex - 1);
 });
 
 // ---------- 启动 ----------

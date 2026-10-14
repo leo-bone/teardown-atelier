@@ -792,6 +792,107 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
       note: 'iFixit 口径（参考近年 Pro 机型 7/10）：玻璃背板可开启更换电池、模块化程度高，但屏幕与电池仍需加热除胶、粘合剂多',
     },
     layers,
+    steps: [
+      {
+        id: 's1-frame',
+        title: '关机，卸下底部两颗五角螺丝',
+        body: '拆机的第一动作永远是断电。底部两颗五角（Pentalobe）螺丝是苹果故意的"门槛"——用常规一字螺丝刀会直接拧花。拆完螺丝不要急着撬：屏幕胶还吃着力。',
+        layers: ['frame'],
+        tools: ['五角 P2 螺丝刀', '吸盘', '撬片'],
+        stats: [
+          { label: '螺丝', value: '2 × Pentalobe' },
+          { label: '第一步', value: '务必先断电' },
+        ],
+      },
+      {
+        id: 's2-cover',
+        title: '加热软化胶，吸盘开缝',
+        body: '前屏与中框之间是一圈防水胶。用加热台/热风枪把边缘加热到胶软化，再用吸盘拉出一道缝、塞入撬片。温度不够硬撬会把 OLED 直接掰裂。',
+        layers: ['cover'],
+        tools: ['加热台 / 热风枪', '吸盘', '塑料撬片'],
+        stats: [
+          { label: '边框材料', value: '钛合金' },
+          { label: '前玻璃', value: '陶瓷盾 2' },
+        ],
+      },
+      {
+        id: 's3-display',
+        title: '断开屏幕排线，取下 OLED 总成',
+        body: '开缝后从右侧掀开屏幕（排线在右侧，不要整片掰开）。先断屏幕排线再取下总成。OLED 是折叠多层结构，任何折死都会留下不可逆的亮斑。',
+        layers: ['display'],
+        tools: ['撬片', '防静电镊子'],
+        stats: [
+          { label: '面板', value: 'OLED' },
+          { label: '形态', value: '刘海 / 灵动岛开孔' },
+        ],
+      },
+      {
+        id: 's4-battery',
+        title: '断电池排线，拉片取出电池',
+        body: '先断电池排线，再拉电池下的拉伸拉片把电池带下来。苹果用拉片而不是撬，是为了避免撬破锂聚合物软包——撬破的就是一颗火源。',
+        layers: ['battery'],
+        tools: ['电池拉片', '塑料撬棒'],
+        stats: [
+          { label: '容量', value: '约 5567 mAh' },
+          { label: '类型', value: '锂聚合物软包' },
+        ],
+      },
+      {
+        id: 's5-camera',
+        title: '取下三摄模组',
+        body: '三摄共用一块金属底板，整体拆下。镜头外圈是金属桶环保护玻璃，拆的时候不要单独拧镜片——模组出厂已经做过光学对齐。',
+        layers: ['camera'],
+        tools: ['精密螺丝刀', '防静电镊子'],
+        stats: [
+          { label: '摄像头', value: '3 摄' },
+          { label: '主摄光圈', value: '6 叶片机械' },
+        ],
+      },
+      {
+        id: 's6-cooling',
+        title: '撕开液冷散热片',
+        body: '石墨 + 均热板把 SoC 的热摊到整个中框。散热片是背胶贴合，撕下来基本不可复用，属于一次性件。',
+        layers: ['cooling'],
+        tools: ['塑料撬棒', '加热台'],
+        stats: [
+          { label: '形式', value: '均热板 + 石墨' },
+          { label: '复用性', value: '一次性' },
+        ],
+      },
+      {
+        id: 's7-board',
+        title: '断开各排线，取出主板',
+        body: '主板是单层大板设计，A 面是 SoC 与存储，B 面堆叠射频与电源。断开所有排线后整体取出。WMCM 侧边封装让主板厚度显著下降。',
+        layers: ['board'],
+        tools: ['防静电镊子', '撬片'],
+        stats: [
+          { label: '平台', value: 'A20 Pro' },
+          { label: '封装工艺', value: 'WMCM 侧边' },
+        ],
+      },
+      {
+        id: 's8-rf',
+        title: '拆无线充电线圈与天线',
+        body: '螺旋铜线圈 + NFC + 天线模组贴在后盖内侧。这一层最容易被忽略，但它是 MagSafe 对位和无线充电效率的直接决定因素。',
+        layers: ['rf'],
+        tools: ['塑料撬棒', '加热台'],
+        stats: [
+          { label: '无线充', value: 'MagSafe 对位' },
+          { label: '形式', value: '螺旋铜线圈' },
+        ],
+      },
+      {
+        id: 's9-back',
+        title: '加热取下后盖玻璃',
+        body: '最后一步，也是对胶依赖最重的一步：后盖玻璃同样是一圈结构胶，需要加热后慢慢撬。拆下来的后盖基本无法无伤复用。',
+        layers: ['back'],
+        tools: ['加热台 / 热风枪', '撬片'],
+        stats: [
+          { label: '后盖', value: '磨砂玻璃' },
+          { label: '拆后复用', value: '基本不可' },
+        ],
+      },
+    ],
     headline: [
       { label: '工艺', value: '2nm', unit: '台积电 N2' },
       { label: '性能', value: '+18', unit: '% vs A19' },

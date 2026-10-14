@@ -39,6 +39,21 @@ export interface SpecRow {
   note?: string;
 }
 
+/** 分步拆解流程中的一步（iFixit 式 Step） */
+export interface TeardownStep {
+  id: string;
+  /** 步骤标题，动词开头，如「卸下底部两颗五角螺丝」 */
+  title: string;
+  /** 这一步在做什么、为什么、要注意什么 */
+  body: string;
+  /** 这一步涉及的层 id：3D 小窗会高亮这些层，中央大图取第一个有参考图的层 */
+  layers: string[];
+  /** 这一步的关键参数 / 要点速览 */
+  stats?: { label: string; value: string }[];
+  /** 这一步需要的工具 */
+  tools?: string[];
+}
+
 export interface ComparisonRow {
   label: string;
   prev: string;
@@ -64,6 +79,8 @@ export interface Subject {
     rows: ComparisonRow[];
   };
   layers: Layer[];
+  /** 分步拆解流程（iFixit 式 Step 序列）。缺省时由层列表顺序自动生成 */
+  steps?: TeardownStep[];
   /** 相机初始位置与目标 */
   camera: { position: [number, number, number]; target: [number, number, number] };
   /** 默认爆炸距离的整体缩放 */

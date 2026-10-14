@@ -516,6 +516,74 @@ CPU 的节奏规律是"两代 GPU 换一代 CPU"：Grace 服务 Hopper 和 Black
       note: '半导体封装本身接近零件级精度：4 个 tile 与 8 组 HBM4 均为独立建模。BGA 焊球以 InstancedMesh 按真实阵列密度生成（26×34），是全站唯一接近真实零件量的部分。die 内部功能分区为结构性示意，不代表真实版图。',
     },
     layers,
+    steps: [
+      {
+        id: 's1-superchip',
+        title: '从主板上取下超级芯片封装',
+        body: '整块 VR200 封装从主板上拆下。这是最贵的一颗件，一次拆卸基本等于报废，所以这一步只发生在良率分析或失效分析场景，不在量产产线上。',
+        layers: ['superchip'],
+        tools: ['热风返修台', 'BGA 拆焊设备', 'X-Ray 检测'],
+        stats: [
+          { label: '封装形式', value: 'CoWoS-L' },
+          { label: '拆解场景', value: '失效分析' },
+        ],
+      },
+      {
+        id: 's2-substrate',
+        title: '分离封装基板与供电层',
+        body: '有机基板承载全部供电与信号再分配，BGA 焊球把封装连到主板。基板分层数直接决定供电能力——AI 芯片的电流需求是它最大的工程挑战。',
+        layers: ['substrate'],
+        tools: ['基板切割设备', '层析检测设备'],
+        stats: [
+          { label: '连接方式', value: 'BGA 焊球' },
+          { label: '作用', value: '供电 + 信号再分配' },
+        ],
+      },
+      {
+        id: 's3-cowos',
+        title: '拆开 CoWoS-L 硅中介层',
+        body: '中介层是把多个 die 与 HBM 连到同一平面的"高速公路"。TSV 硅通孔 + 再分配层，线宽已经接近光学极限——这是先进封装真正的技术壁垒。',
+        layers: ['cowos'],
+        tools: ['激光开盖设备', 'SEM / FIB 检测'],
+        stats: [
+          { label: '类型', value: 'CoWoS-L' },
+          { label: '关键结构', value: 'TSV + RDL' },
+        ],
+      },
+      {
+        id: 's4-compute',
+        title: '取出 reticle 级计算 die',
+        body: '计算 die 做到 reticle 极限尺寸（约 800 mm² 级），单颗里塞进上千亿晶体管。到顶之后再想提升，只能靠多 die 拼接——这就是 chiplet 化的根本原因。',
+        layers: ['compute'],
+        tools: ['芯片级开封设备', '探针台'],
+        stats: [
+          { label: '尺寸量级', value: 'reticle 级' },
+          { label: '晶体管', value: '千亿级' },
+        ],
+      },
+      {
+        id: 's5-iodie',
+        title: '拆 I/O die',
+        body: 'I/O die 负责与外部通信，SerDes 通道数决定了它能带多少互连带宽。把它和计算 die 分开做，可以在同一制程下分别优化两者。',
+        layers: ['iodie'],
+        tools: ['芯片级开封设备', '探针台'],
+        stats: [
+          { label: '职责', value: '外部互连' },
+          { label: '关键指标', value: 'SerDes 通道数' },
+        ],
+      },
+      {
+        id: 's6-hbm',
+        title: '取下 HBM4 显存堆栈',
+        body: '最后是 8 组 HBM4。3D 堆叠的 DRAM 用 TSV 垂直互连，带宽是传统 GDDR 的数倍——AI 算力的瓶颈往往不在计算，而在能不能把数据喂进去。',
+        layers: ['hbm'],
+        tools: ['堆叠拆解设备', '金相显微镜'],
+        stats: [
+          { label: '数量', value: '8 组' },
+          { label: '代际', value: 'HBM4' },
+        ],
+      },
+    ],
     headline: [
       { label: '晶体管', value: '3360', unit: '亿' },
       { label: '带宽', value: '22', unit: 'TB/s HBM4' },

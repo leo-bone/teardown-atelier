@@ -150,6 +150,10 @@
                 </button>
               </div>
               <div class="tool-group">
+                <button id="btn-steps" class="mini toggle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h16M4 18h7"/></svg>
+                  <span class="btn-txt">分步</span>
+                </button>
                 <button id="btn-shot" class="mini">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
                   导出 PNG
@@ -160,6 +164,25 @@
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- 分步拆解引导条 -->
+          <div id="step-rail" hidden>
+            <div class="step-head">
+              <span class="step-count"><b id="step-cur">1</b><span id="step-total">/9</span></span>
+              <div class="step-title-wrap">
+                <div class="step-kicker">分步拆解</div>
+                <h3 id="step-title"></h3>
+              </div>
+              <div class="step-nav">
+                <button id="step-prev" class="mini" title="上一步">←</button>
+                <button id="step-next" class="mini" title="下一步">→</button>
+              </div>
+            </div>
+            <p id="step-body"></p>
+            <div id="step-tools" class="step-tools"></div>
+            <div id="step-stats" class="step-stats"></div>
+            <div id="step-dots" class="step-dots"></div>
           </div>
 
           <!-- 悬浮信息卡 -->
