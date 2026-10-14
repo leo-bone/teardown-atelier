@@ -31,6 +31,7 @@ export interface Env {
 const SYSTEM_PROMPT = `你是消费电子与工业产品的拆解工程师。用户给你一个产品名，你要输出该产品的结构化拆解规格，用于一个交互式 3D 拆解演示。
 
 硬性要求：
+0. **JSON 的结构与键名必须使用 ASCII 半角标点**（半角冒号、半角逗号、半角花括号）。只有字符串的**内容**里可以用中文标点。
 1. 只输出 JSON，不要 markdown 代码块，不要任何解释文字。
 2. 全部字段用简体中文（id / accent 除外）。
 3. layers 给 4-8 个功能层，按"从外到内"的拆解顺序排列。
@@ -40,8 +41,9 @@ const SYSTEM_PROMPT = `你是消费电子与工业产品的拆解工程师。用
    - pos 是该层在装配态的位置 [x, y, z]，设备整体以原点为中心，y 向上
    - 层与层在 y 方向上要分开（例如屏幕在 y=+0.2，主板 y=0，电池 y=-0.2）
    - color 是十进制 RGB 整数，如 0x8a9096
-5. 不确定的数字不要编造：specs 里只写你确有把握的规格，没有就少写。
-6. 明确区分"确知规格"与"常见结构推断"：overview 里说明哪些是推断。
+5. 字符串内容里**不要使用未转义的双引号**，需要引号时用中文引号「」或『』。
+6. 不确定的数字不要编造：specs 里只写你确有把握的规格，没有就少写。
+7. 明确区分"确知规格"与"常见结构推断"：overview 里说明哪些是推断。
 
 JSON 结构：
 {
@@ -119,18 +121,135 @@ function cacheKey(query: string): Request {
   return new Request(`https://cache.internal/teardown/${encodeURIComponent(norm)}`);
 }
 
-/** 从 LLM 回复里抠出 JSON（容忍 ```json 围栏和前后废话） */
+/**
+ * 容错修复 LLM 吐出的 JSON。
+ *
+ * 为什么需要：实测 deepseek-chat 即使开了 response_format=json_object，
+ * 仍会吐非法 JSON。除了字符串里的裸引号、裸换行、尾随逗号之外，
+ * **中文提示词还会诱导它用全角标点写 JSON 结构**（"name"："值"），
+ * 这会让标准解析器在第 28 个字符就挂掉。
+ *
+ * 修的都是 LLM 最常见的五类错，不做完整语法树修复：
+ *   1. JSON 结构里的全角标点（：，｛｝［］）→ 半角
+ *   2. 字符串内部的裸双引号 → 转义
+ *   3. 字符串内部的裸换行 / tab → 转成 \n / \t
+ *   4. } ] 前面的尾随逗号 → 删除
+ *   5. 输出被 max_tokens 截断 → 补足未闭合的引号与括号
+ */
+function repairJsonText(raw: string): string {
+  let out = '';
+  let inStr = false;
+  let esc = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i];
+
+    if (inStr) {
+      if (esc) {
+        out += c;
+        esc = false;
+        continue;
+      }
+      if (c === '\\') {
+        out += c;
+        esc = true;
+        continue;
+      }
+      if (c === '"') {
+        // 判断是字符串结束还是内容里的裸引号：后面跟 半角或全角的
+        // 逗号/右括号/冒号/空白 → 认为是结束引号
+        const rest = raw.slice(i + 1);
+        const m = rest.match(/^\s*(.)/);
+        const next = m ? m[1] : '';
+        if (next === '' || /[,}\]:：，；]/.test(next)) {
+          inStr = false;
+          out += c;
+        } else {
+          out += '\\"'; // 内容里的裸引号
+        }
+        continue;
+      }
+      if (c === '\n') {
+        out += '\\n';
+        continue;
+      }
+      if (c === '\r') {
+        continue;
+      }
+      if (c === '\t') {
+        out += '\\t';
+        continue;
+      }
+      out += c;
+      continue;
+    }
+
+    // 字符串外：全角标点归一成半角
+    if (c === '：') { out += ':'; continue; }
+    if (c === '，') { out += ','; continue; }
+    if (c === '；') { out += ';'; continue; }
+    if (c === '｛') { stack.push('}'); out += '{'; continue; }
+    if (c === '｝') { stack.pop(); out += '}'; continue; }
+    if (c === '［') { stack.push(']'); out += '['; continue; }
+    if (c === '］') { stack.pop(); out += ']'; continue; }
+    if (c === '＂') { inStr = true; out += '"'; continue; }
+
+    if (c === '"') {
+      inStr = true;
+      out += c;
+      continue;
+    }
+    if (c === '{' || c === '[') {
+      stack.push(c === '{' ? '}' : ']');
+      out += c;
+      continue;
+    }
+    if (c === '}' || c === ']') {
+      stack.pop();
+      out += c;
+      continue;
+    }
+    out += c;
+  }
+
+  // 截断补救：字符串没闭合就补引号，括号没闭合就补齐
+  if (inStr) out += '"';
+  while (stack.length) out += stack.pop();
+
+  // 尾随逗号
+  out = out.replace(/,(\s*[}\]])/g, '$1');
+  return out;
+}
+
+/** 从 LLM 回复里抠出 JSON（容忍 ```json 围栏、前后废话、以及常见语法错） */
 function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const raw = fenced ? fenced[1] : text;
+  let raw = fenced ? fenced[1] : text;
   const start = raw.search(/[[{]/);
   if (start < 0) throw new Error('LLM 未返回 JSON');
   const opener = raw[start];
   const closer = opener === '[' ? ']' : '}';
-  // 从后往前找最后一个配对收尾符，容忍尾部废话
   const end = raw.lastIndexOf(closer);
-  if (end <= start) throw new Error('LLM 返回的 JSON 不完整');
-  return JSON.parse(raw.slice(start, end + 1));
+  if (end <= start) {
+    // 收尾符都没找到，基本是被截断了——交给 repair 补齐
+    raw = raw.slice(start);
+  } else {
+    raw = raw.slice(start, end + 1);
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    /* 落到修复路径 */
+  }
+
+  const repaired = repairJsonText(raw);
+  try {
+    return JSON.parse(repaired);
+  } catch (e) {
+    throw new Error(`LLM 返回的 JSON 无法解析：${(e as Error).message}`);
+  }
 }
 
 /** 服务端也要做一次结构校验，坏数据不进缓存也不回给前端 */
@@ -172,34 +291,56 @@ async function callLLM(env: Env, query: string): Promise<unknown> {
   const key = env.LLM_API_KEY;
   if (!key) throw new Error('服务端未配置 LLM_API_KEY');
 
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.35,
-      max_tokens: 3000,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: USER_TMPL(query) },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`LLM ${res.status}: ${detail.slice(0, 160)}`);
-  }
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
+  const attempt = async (nudge: boolean) => {
+    const res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.35,
+        // 8 层 + 长正文实测要 3000+ token，给足余量避免被截断成半份 JSON
+        max_tokens: 6000,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: nudge ? `${USER_TMPL(query)}\n\n上次返回的 JSON 有语法错误，请只输出一个语法完全合法的 JSON 对象，不要在字符串里使用未转义的引号或换行。` : USER_TMPL(query) },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      throw new Error(`LLM ${res.status}: ${detail.slice(0, 160)}`);
+    }
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
+    };
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
+    if (!content) throw new Error('LLM 返回为空');
+    // 长度被截断时明确报出来，比丢给 JSON 解析器好诊断
+    if (choice?.finish_reason === 'length') {
+      throw new Error('LLM 输出被长度上限截断');
+    }
+    return extractJson(content);
   };
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('LLM 返回为空');
-  return extractJson(content);
+
+  try {
+    return await attempt(false);
+  } catch (e) {
+    // 解析失败才重试；网络/鉴权错误重试没有意义
+    const msg = (e as Error).message;
+    if (/无法解析|截断|未返回 JSON/.test(msg)) {
+      try {
+        return await attempt(true);
+      } catch {
+        throw e; // 保留第一次的错误信息，更接近根因
+      }
+    }
+    throw e;
+  }
 }
 
 export default {
