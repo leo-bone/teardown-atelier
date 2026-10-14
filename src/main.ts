@@ -2,6 +2,7 @@ import './style.css';
 import { TeardownViewer } from './core/viewer';
 import { SUBJECTS } from './subjects';
 import type { Subject, TeardownStep } from './core/types';
+import { TOOLS, toolIdFor, toolsForSteps } from './data/tools';
 
 /** 每层的代表色，用于左栏色块 */
 const SWATCH: Record<string, string> = {
@@ -97,6 +98,67 @@ function setHero(src: string | null, cap: string) {
 /** 当前主体整体爆炸图（OG 预览图，作为未选中层时的默认大图） */
 function subjectHero(id: string): string {
   return `./og/${id}.png`;
+}
+/** 当前主体装配态产品照（对比滑块的左图） */
+function assembledHero(id: string): string {
+  return `./ref/${id}/assembled.jpg`;
+}
+
+// ---------- 拆前 / 拆后对比滑块 ----------
+let compareMode = false;
+const compareEl = document.getElementById('compare') as HTMLElement;
+
+function setCompareX(pct: number) {
+  compareEl.style.setProperty('--x', `${Math.max(3, Math.min(97, pct))}%`);
+}
+
+function enterCompare() {
+  if (activeLayerId) { hideCard(); }
+  compareMode = true;
+  (document.getElementById('cmp-before') as HTMLImageElement).src = assembledHero(current.id);
+  (document.getElementById('cmp-after') as HTMLImageElement).src = subjectHero(current.id);
+  setCompareX(50);
+  compareEl.removeAttribute('hidden');
+  document.getElementById('hero-shot-wrap')!.style.opacity = '0';
+  document.getElementById('btn-compare')!.classList.add('on');
+  document.getElementById('hero-shot-cap')!.style.opacity = '0';
+}
+
+function exitCompare() {
+  compareMode = false;
+  compareEl.setAttribute('hidden', '');
+  document.getElementById('hero-shot-wrap')!.style.opacity = '';
+  document.getElementById('hero-shot-cap')!.style.opacity = '';
+  document.getElementById('btn-compare')!.classList.remove('on');
+}
+
+document.getElementById('btn-compare')!.addEventListener('click', () => {
+  if (compareMode) exitCompare();
+  else enterCompare();
+});
+
+// 拖动分割线（指针事件，支持鼠标 / 触屏）
+{
+  const el = compareEl;
+  let dragging = false;
+  const xFromEvent = (ev: PointerEvent) => {
+    const r = el.getBoundingClientRect();
+    return ((ev.clientX - r.left) / r.width) * 100;
+  };
+  el.addEventListener('pointerdown', (ev) => {
+    dragging = true;
+    el.setPointerCapture(ev.pointerId);
+    setCompareX(xFromEvent(ev));
+  });
+  el.addEventListener('pointermove', (ev) => {
+    if (dragging) setCompareX(xFromEvent(ev));
+  });
+  const stop = (ev: PointerEvent) => {
+    dragging = false;
+    if (el.hasPointerCapture(ev.pointerId)) el.releasePointerCapture(ev.pointerId);
+  };
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointercancel', stop);
 }
 
 document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
@@ -278,6 +340,19 @@ function renderInfo(s: Subject) {
   // 剖切工具可用性
   (document.getElementById('section-tools') as HTMLElement).style.display = s.sectionable ? '' : 'none';
 
+  // 工具图鉴：这台设备全部步骤涉及的工装
+  const grid = document.getElementById('tools-grid')!;
+  const toolList = toolsForSteps(steps);
+  grid.innerHTML = toolList
+    .map(
+      (t) => `<figure class="tool-card">
+        <img src="${t.image}" alt="${t.name}" loading="lazy" />
+        <figcaption><strong>${t.name}</strong><span>${t.note}</span></figcaption>
+      </figure>`
+    )
+    .join('');
+  (document.getElementById('tools-panel') as HTMLElement).style.display = toolList.length ? '' : 'none';
+
   // tabs 高亮
   tabsEl.querySelectorAll('.tab').forEach((t) => {
     t.classList.toggle('active', (t as HTMLElement).dataset.id === s.id);
@@ -291,6 +366,8 @@ function loadSubject(id: string) {
   current = s;
   activeLayerId = null;
   hideCard();
+  if (compareMode) exitCompare();
+  steps = buildSteps(s);
   // 渐入切换：先把视口淡出，装载完新主体后再淡入，读起来是平滑过渡而非硬切
   stage.classList.add('pre-load');
   viewer.load(s);
@@ -302,7 +379,6 @@ function loadSubject(id: string) {
   updateShareMeta(s);
   // 图片为主：默认展示整体爆炸大图
   setHero(subjectHero(s.id), `${s.name} · 整体爆炸图`);
-  steps = buildSteps(s);
   if (stepMode) renderStep(0);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
   (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
@@ -328,6 +404,7 @@ function selectLayer(layerId: string, focus: boolean) {
   const layer = current.layers.find((l) => l.id === layerId);
   if (!layer) return;
   activeLayerId = layerId;
+  if (compareMode) exitCompare();
 
   document.querySelectorAll('.layer-item').forEach((e) => {
     e.classList.toggle('active', (e as HTMLElement).dataset.id === layerId);
@@ -405,6 +482,7 @@ function buildSteps(s: Subject): TeardownStep[] {
 function enterStepMode() {
   stepMode = true;
   stepIndex = 0;
+  if (compareMode) exitCompare();
   document.getElementById('step-rail')!.removeAttribute('hidden');
   document.getElementById('btn-steps')!.classList.add('on');
   hideCard();
@@ -438,7 +516,16 @@ function renderStep(i: number) {
   const toolsEl = document.getElementById('step-tools')!;
   const hasTools = !!st.tools?.length;
   toolsEl.innerHTML = hasTools
-    ? st.tools!.map((t) => `<span class="tool-chip">${t}</span>`).join('')
+    ? st.tools!
+        .map((t) => {
+          const id = toolIdFor(t);
+          const def = id ? TOOLS[id] : undefined;
+          const img = def
+            ? `<img class="tool-chip-img" src="${def.image}" alt="${def.name}" loading="lazy" />`
+            : '';
+          return `<span class="tool-chip${def ? ' has-img' : ''}">${img}${t}</span>`;
+        })
+        .join('')
     : '';
   toolsEl.style.display = hasTools ? '' : 'none';
 
