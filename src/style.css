@@ -422,11 +422,15 @@ body {
   border: 1px solid var(--border);
   position: relative; overflow: hidden;
 }
+.hc-thumb-img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; border-radius: 11px; z-index: 0;
+}
 .hc-thumb::after {
   content: ""; position: absolute; left: 50%; bottom: -36%; width: 62%; height: 62%;
   transform: translateX(-50%); border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
-  filter: blur(8px);
+  filter: blur(8px); z-index: 1;
 }
 .hc-name { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
 .hc-sub { font-size: 11px; color: var(--text-dim); }

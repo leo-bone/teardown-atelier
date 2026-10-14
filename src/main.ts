@@ -60,7 +60,9 @@ SUBJECTS.forEach((s, i) => {
   card.style.setProperty('--ac', accent);
   card.innerHTML = `
     <span class="hc-index">0${i + 1}</span>
-    <span class="hc-thumb"></span>
+    <span class="hc-thumb">
+      <img class="hc-thumb-img" src="./og/thumb/${s.id}.png" alt="" loading="lazy" />
+    </span>
     <span class="hc-name">${s.name}</span>
     <span class="hc-sub">${s.subtitle}</span>
     <span class="hc-desc">${s.tagline}</span>
@@ -100,8 +102,13 @@ function updateShareMeta(s: Subject) {
   document.title = `${s.name} · Teardown Atelier`;
   const ogTitle = document.querySelector('meta[property="og:title"]') as HTMLMetaElement | null;
   const ogDesc = document.querySelector('meta[property="og:description"]') as HTMLMetaElement | null;
+  const ogImage = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null;
+  const twImage = document.querySelector('meta[name="twitter:image"]') as HTMLMetaElement | null;
+  const imageUrl = `https://leo-bone.github.io/teardown-atelier/og/${s.id}.png`;
   if (ogTitle) ogTitle.content = `${s.name} · Teardown Atelier`;
   if (ogDesc) ogDesc.content = s.tagline;
+  if (ogImage) ogImage.content = imageUrl;
+  if (twImage) twImage.content = imageUrl;
   const x = document.getElementById('share-x') as HTMLAnchorElement | null;
   const wb = document.getElementById('share-wb') as HTMLAnchorElement | null;
   const text = encodeURIComponent(`${s.name} · 工程级 3D 拆解：${s.tagline}`);
