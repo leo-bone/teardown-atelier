@@ -1,6 +1,7 @@
 import './style.css';
 import { TeardownViewer } from './core/viewer';
-import { SUBJECTS } from './subjects';
+import { SUBJECT_META, loadSubjectDef } from './subjects';
+import type { SubjectMeta } from './subjects';
 import type { Subject, TeardownStep } from './core/types';
 import { TOOLS, toolIdFor, toolsForSteps } from './data/tools';
 import { generateSubject } from './data/generator';
@@ -47,8 +48,12 @@ const viewer = new TeardownViewer(viewport, labels, {
 /** 运行时生成的主体（任意产品输入）追加在这里 */
 const dynamicSubjects: Subject[] = [];
 
+async function resolveSubject(id: string): Promise<Subject | undefined> {
+  return (await loadSubjectDef(id)) ?? dynamicSubjects.find((s) => s.id === id);
+}
+
 function findSubject(id: string): Subject | undefined {
-  return SUBJECTS.find((s) => s.id === id) ?? dynamicSubjects.find((s) => s.id === id);
+  return dynamicSubjects.find((s) => s.id === id);
 }
 
 function addTab(s: Subject) {
@@ -59,20 +64,20 @@ function addTab(s: Subject) {
   b.dataset.id = s.id;
   b.addEventListener('click', () => {
     skipIntro = true; // 顶栏切换不重复播入场动画
-    loadSubject(s.id);
+    void loadSubject(s.id);
   });
   tabsEl.appendChild(b);
 }
 
 const tabsEl = document.getElementById('tabs')!;
-SUBJECTS.forEach((s, i) => {
+SUBJECT_META.forEach((s: SubjectMeta, i) => {
   const b = document.createElement('button');
   b.className = 'tab';
   b.innerHTML = `<span class="tab-idx">0${i + 1}</span>${s.name}`;
   b.dataset.id = s.id;
   b.addEventListener('click', () => {
     skipIntro = true; // 顶栏切换不重复播入场动画
-    loadSubject(s.id);
+    void loadSubject(s.id);
   });
   tabsEl.appendChild(b);
 });
@@ -80,7 +85,7 @@ SUBJECTS.forEach((s, i) => {
 // ---------- 落地选择台 ----------
 const heroEl = document.getElementById('hero') as HTMLElement;
 const heroCards = document.getElementById('hero-cards') as HTMLElement;
-SUBJECTS.forEach((s, i) => {
+SUBJECT_META.forEach((s: SubjectMeta, i) => {
   const accent = s.accent ?? '#5b8cff';
   const card = document.createElement('button');
   card.className = 'hero-card';
@@ -96,7 +101,7 @@ SUBJECTS.forEach((s, i) => {
     <span class="hc-cta">查看拆解 →</span>`;
   card.addEventListener('click', () => {
     skipIntro = false; // 从选择台进入，播一次入场
-    loadSubject(s.id);
+    void loadSubject(s.id);
     hideHero();
   });
   heroCards.appendChild(card);
@@ -210,7 +215,7 @@ function runGenerate(raw: string) {
   }
   skipIntro = false;
   hideHero();
-  loadSubject(s.id);
+  void loadSubject(s.id);
   toast(`已按通用模板生成「${s.name}」· ${s.layers.length} 层（示意）`);
 }
 document.getElementById('gen-btn')!.addEventListener('click', () => {
@@ -462,9 +467,14 @@ function staggerPanels() {
 }
 
 // ---------- 加载主体 ----------
-function loadSubject(id: string) {
-  const s = findSubject(id);
-  if (!s) return;
+async function loadSubject(id: string) {
+  // 先把视口淡出，再等主体 chunk 下载完——读起来是平滑过渡而不是白屏
+  stage.classList.add('pre-load');
+  const s = await resolveSubject(id);
+  if (!s) {
+    stage.classList.remove('pre-load');
+    return;
+  }
   current = s;
   activeLayerId = null;
   hideCard();
@@ -474,8 +484,6 @@ function loadSubject(id: string) {
   if (skipIntro) hideSubjectIntro();
   else showSubjectIntro(s);
   skipIntro = false;
-  // 渐入切换：先把视口淡出，装载完新主体后再淡入，读起来是平滑过渡而非硬切
-  stage.classList.add('pre-load');
   viewer.load(s);
   viewer.setLabelMode('dot');
   const lb = document.getElementById('btn-labels') as HTMLElement;
@@ -845,15 +853,14 @@ if (wanted?.startsWith('gen-')) {
     /* ignore */
   }
 }
-const initial =
-  SUBJECTS.find((s) => s.id === wanted) ??
-  (restoredQuery ? (() => {
-    const g = generateSubject(restoredQuery);
-    dynamicSubjects.push(g);
-    return g;
-  })() : undefined) ??
-  SUBJECTS[0];
-loadSubject(initial.id);
+const initialId =
+  SUBJECT_META.find((s) => s.id === wanted)?.id ??
+  (restoredQuery ? generateSubject(restoredQuery).id : undefined) ??
+  SUBJECT_META[0].id;
+if (restoredQuery && initialId.startsWith('gen-')) {
+  dynamicSubjects.push(generateSubject(restoredQuery));
+}
+void loadSubject(initialId);
 
 const exRaw = params.get('explode');
 if (exRaw !== null && Number.isFinite(Number(exRaw))) {

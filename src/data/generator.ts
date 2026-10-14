@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Layer, Subject, TeardownStep, Hotspot } from '../core/types';
 
 /**
@@ -68,7 +69,7 @@ function buildGroup(pieces: Piece[]): THREE.Group {
         const t = Math.max(w, d) * 0.035;
         const bar = (bw: number, bd: number, bx: number, bz: number) => {
           const m = new THREE.Mesh(
-            new THREE.BoxGeometry(bw, h, bd),
+            new RoundedBoxGeometry(bw, h, bd, 2, t * 0.3),
             new THREE.MeshStandardMaterial({ color: p.color, ...M(p.metalness ?? 0.85, p.roughness ?? 0.3) })
           );
           m.position.set(bx, 0, bz);
@@ -79,6 +80,13 @@ function buildGroup(pieces: Piece[]): THREE.Group {
         bar(t, d, -w / 2, 0);
         bar(t, d, w / 2, 0);
         continue;
+      }
+      case 'box':
+      case 'slab': {
+        // 圆角立方体：消费类产品的壳体几乎都是圆角的，直角盒一眼假
+        const r = Math.min(w, h, d) * (p.shape === 'slab' ? 0.22 : 0.1);
+        geo = new RoundedBoxGeometry(w, h, d, 3, Math.max(0.004, r));
+        break;
       }
       default:
         geo = new THREE.BoxGeometry(w, h, d);
