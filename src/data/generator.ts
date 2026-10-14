@@ -589,6 +589,24 @@ function slugify(s: string): string {
   );
 }
 
+/**
+ * 按模型实际包围盒算相机距离。
+ * 相机 FOV 是 38°（viewer.ts），这里用同样口径反推，保证再大的蓝图
+ * （汽车 3.4 单位、火箭更高）也能整件入画，不会切边。
+ */
+function autoCamera(layerCount: number): { position: [number, number, number]; target: [number, number, number] } {
+  const n = Math.max(3, Math.min(10, layerCount));
+  // 层在 y 上最大跨度 ≈ 每层 0.16 的装配间隔 + 爆炸位移 1.25 + i*0.28
+  const spanY = (n - 1) * 0.16 + 1.25 + (n - 1) * 0.28 + 0.6;
+  const spanXZ = 3.2; // size 上限就是 3.2
+  const radius = Math.max(spanY, spanXZ) * 0.5;
+  const fov = (38 * Math.PI) / 180;
+  const dist = (radius / Math.tan(fov / 2)) * 1.28;
+  const d = Math.max(3, Math.min(26, dist));
+  const dir = new THREE.Vector3(0.52, 0.4, 1).normalize().multiplyScalar(d);
+  return { position: [dir.x, dir.y, dir.z], target: [0, 0, 0] };
+}
+
 /** 把一段（可能是 LLM 产出的）文本收敛成安全的纯文本 */
 function text(v: unknown, fallback = ''): string {
   if (typeof v !== 'string') return fallback;
@@ -697,7 +715,6 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
     `${text(spec.category, '设备')} · ${n} 个结构层 · ${isAI ? 'AI 生成' : '通用模板重建'}`,
     layers.map((l) => ({ name: l.name, group: l.group, color: 0x4b5563 }))
   );
-
   const modeledParts = layers.reduce(
     (acc, l, i) => acc + 1 + (Array.isArray(spec.layers[i]?.extras) ? spec.layers[i].extras!.length : 0),
     0
@@ -727,7 +744,7 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
           ],
     background: 0x0c0e11,
     accent: /^#[0-9a-fA-F]{6}$/.test(spec.accent ?? '') ? spec.accent! : '#5b8cff',
-    camera: { position: [0, 0.9, 3.4], target: [0, 0, 0] },
+    camera: autoCamera(spec.layers.length),
     explodeScale: 1,
     sectionable: true,
     heroImage,
