@@ -854,4 +854,78 @@ export class TeardownViewer {
     this.composer.setPixelRatio(oldPR);
     return url;
   }
+
+  /**
+   * 录一段自动分步拆解动画，返回视频 Blob（WebM）。
+   *
+   * 走 canvas.captureStream() + MediaRecorder，纯前端、无后端、无依赖。
+   * 时间线：0–15% 装配态自转 → 15–55% 连续爆炸 → 55–88% 爆炸态自转 → 88–100% 收起。
+   * 录制期间强制开启自转，录完恢复用户原设置。
+   */
+  async record(durationSec = 24, onProgress?: (p: number) => void): Promise<Blob> {
+    const canvas = this.renderer.domElement;
+    if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') {
+      throw new Error('当前浏览器不支持画布录制');
+    }
+
+    const mimeCandidates = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4',
+    ];
+    const mime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? '';
+    const stream = canvas.captureStream(30);
+    const rec = new MediaRecorder(
+      stream,
+      mime ? { mimeType: mime, videoBitsPerSecond: 12_000_000 } : undefined
+    );
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size) chunks.push(e.data);
+    };
+
+    const prevAuto = this.controls.autoRotate;
+    const prevWanted = this.autoRotateWanted;
+    this.controls.autoRotate = true;
+    this.autoRotateWanted = true;
+
+    // 从装配态 + 默认机位开始
+    this.explodeTarget = 0;
+    this.explodeT = 0;
+    this.applyExplode();
+    this.resetView();
+
+    const stopped = new Promise<void>((resolve) => {
+      rec.onstop = () => resolve();
+    });
+    rec.start(200);
+
+    const t0 = performance.now();
+    await new Promise<void>((resolve) => {
+      const step = () => {
+        const el = (performance.now() - t0) / 1000;
+        const p = Math.min(1, el / durationSec);
+        onProgress?.(p);
+        let target = 0;
+        if (p < 0.15) target = 0;
+        else if (p < 0.55) target = (p - 0.15) / 0.4;
+        else if (p < 0.88) target = 1;
+        else target = 1 - (p - 0.88) / 0.12;
+        this.setExplode(target);
+        if (p >= 1) resolve();
+        else requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+
+    rec.stop();
+    await stopped;
+    this.controls.autoRotate = prevAuto;
+    this.autoRotateWanted = prevWanted;
+    this.explodeTarget = 0;
+    this.explodeT = 0;
+    this.applyExplode();
+    return new Blob(chunks, { type: mime || 'video/webm' });
+  }
 }

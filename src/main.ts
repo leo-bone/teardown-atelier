@@ -3,6 +3,7 @@ import { TeardownViewer } from './core/viewer';
 import { SUBJECTS } from './subjects';
 import type { Subject, TeardownStep } from './core/types';
 import { TOOLS, toolIdFor, toolsForSteps } from './data/tools';
+import { generateSubject } from './data/generator';
 
 /** 每层的代表色，用于左栏色块 */
 const SWATCH: Record<string, string> = {
@@ -43,6 +44,26 @@ const viewer = new TeardownViewer(viewport, labels, {
 });
 
 // ---------- 顶栏 tabs ----------
+/** 运行时生成的主体（任意产品输入）追加在这里 */
+const dynamicSubjects: Subject[] = [];
+
+function findSubject(id: string): Subject | undefined {
+  return SUBJECTS.find((s) => s.id === id) ?? dynamicSubjects.find((s) => s.id === id);
+}
+
+function addTab(s: Subject) {
+  if (tabsEl.querySelector(`[data-id="${s.id}"]`)) return;
+  const b = document.createElement('button');
+  b.className = 'tab';
+  b.innerHTML = `<span class="tab-idx">✦</span>${s.name}`;
+  b.dataset.id = s.id;
+  b.addEventListener('click', () => {
+    skipIntro = true; // 顶栏切换不重复播入场动画
+    loadSubject(s.id);
+  });
+  tabsEl.appendChild(b);
+}
+
 const tabsEl = document.getElementById('tabs')!;
 SUBJECTS.forEach((s, i) => {
   const b = document.createElement('button');
@@ -103,9 +124,9 @@ function setHero(src: string | null, cap: string) {
   void heroShot.offsetWidth;
   heroShot.classList.add('swap');
 }
-/** 当前主体整体爆炸图（OG 预览图，作为未选中层时的默认大图） */
-function subjectHero(id: string): string {
-  return `./og/${id}.png`;
+/** 当前主体整体爆炸图（未选中层时的中央大图） */
+function subjectHero(s: Subject): string {
+  return s.heroImage ?? `./og/${s.id}.png`;
 }
 /** 当前主体装配态产品照（对比滑块的左图） */
 function assembledHero(id: string): string {
@@ -124,7 +145,7 @@ function enterCompare() {
   if (activeLayerId) { hideCard(); }
   compareMode = true;
   (document.getElementById('cmp-before') as HTMLImageElement).src = assembledHero(current.id);
-  (document.getElementById('cmp-after') as HTMLImageElement).src = subjectHero(current.id);
+  (document.getElementById('cmp-after') as HTMLImageElement).src = subjectHero(current);
   setCompareX(50);
   compareEl.removeAttribute('hidden');
   document.getElementById('hero-shot-wrap')!.style.opacity = '0';
@@ -172,6 +193,33 @@ document.getElementById('btn-compare')!.addEventListener('click', () => {
 document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
 document.getElementById('btn-home')!.addEventListener('click', () => showHero());
 
+// ---------- 任意产品输入（MVP：通用模板生成） ----------
+function runGenerate(raw: string) {
+  const q = raw.trim();
+  if (!q) {
+    toast('先输入一个产品名');
+    return;
+  }
+  const s = generateSubject(q);
+  if (!findSubject(s.id)) dynamicSubjects.push(s);
+  addTab(s);
+  try {
+    localStorage.setItem('ta:lastGen', q);
+  } catch {
+    /* 隐私模式下忽略 */
+  }
+  skipIntro = false;
+  hideHero();
+  loadSubject(s.id);
+  toast(`已按通用模板生成「${s.name}」· ${s.layers.length} 层（示意）`);
+}
+document.getElementById('gen-btn')!.addEventListener('click', () => {
+  runGenerate((document.getElementById('gen-input') as HTMLInputElement).value);
+});
+document.getElementById('gen-input')!.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') runGenerate((ev.target as HTMLInputElement).value);
+});
+
 // ---------- 主体入场：产品页式 Hero 时刻 ----------
 const introEl = document.getElementById('subject-intro') as HTMLElement;
 let skipIntro = false;
@@ -188,7 +236,11 @@ function showSubjectIntro(s: Subject) {
       </div>`
     )
     .join('');
-  (document.querySelector('.si-bg') as HTMLElement).style.backgroundImage = `url("${assembledHero(s.id)}")`;
+  // 生成的主体没有装配态照片，用渐变兜底
+  const bg = s.heroImage;
+  (document.querySelector('.si-bg') as HTMLElement).style.backgroundImage = bg
+    ? `linear-gradient(135deg, #1a2030, #0c0e11)`
+    : `linear-gradient(135deg, #1a2030, #0c0e11), url("${assembledHero(s.id)}")`;
   introEl.removeAttribute('hidden');
 }
 function hideSubjectIntro() {
@@ -411,7 +463,7 @@ function staggerPanels() {
 
 // ---------- 加载主体 ----------
 function loadSubject(id: string) {
-  const s = SUBJECTS.find((x) => x.id === id);
+  const s = findSubject(id);
   if (!s) return;
   current = s;
   activeLayerId = null;
@@ -432,7 +484,7 @@ function loadSubject(id: string) {
   renderInfo(s);
   updateShareMeta(s);
   // 图片为主：默认展示整体爆炸大图
-  setHero(subjectHero(s.id), `${s.name} · 整体爆炸图`);
+  setHero(subjectHero(s), `${s.name} · 整体爆炸图`);
   if (stepMode) renderStep(0);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
   (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
@@ -476,7 +528,7 @@ function selectLayer(layerId: string, focus: boolean) {
   if (layer.refImage) {
     setHero(layer.refImage, `${layer.name} · 真实参考图`);
   } else {
-    setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+    setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
   }
 
   if (!hs) { hideCard(); return; }
@@ -509,7 +561,7 @@ function hideCard() {
   activeLayerId = null;
   viewer.setLabelFocus(null);
   // 取消选中：中央大图回到整体爆炸图
-  setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+  setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
   document.querySelectorAll('.layer-item.active, .hotspot-label.active').forEach((e) =>
     e.classList.remove('active')
   );
@@ -554,7 +606,7 @@ function exitStepMode() {
   viewer.isolate(null);
   viewer.resetView();
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('solo', 'active', 'hidden-layer'));
-  setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+  setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
 }
 
 function renderStep(i: number) {
@@ -630,7 +682,7 @@ function renderStep(i: number) {
   if (withRef) {
     setHero(withRef.refImage!, `${withRef.name} · 步骤 ${stepIndex + 1}`);
   } else {
-    setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+    setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
   }
 }
 
@@ -665,6 +717,48 @@ document.getElementById('btn-photo')!.addEventListener('click', (ev) => {
   viewer.setPhotoGrade(next);
   (btn.querySelector('.btn-txt') as HTMLElement).textContent = next ? '影调' : '素图';
   btn.classList.toggle('on', next);
+});
+
+// ---------- 录像：自动分步动画导出 WebM ----------
+const REC_SECONDS = 24;
+function recFmt(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  return `00:${String(s).padStart(2, '0')}`;
+}
+document.getElementById('btn-record')!.addEventListener('click', async () => {
+  const btn = document.getElementById('btn-record') as HTMLButtonElement;
+  const overlay = document.getElementById('rec-overlay') as HTMLElement;
+  const bar = document.getElementById('rec-bar') as HTMLElement;
+  const label = document.getElementById('rec-label') as HTMLElement;
+  btn.disabled = true;
+  overlay.removeAttribute('hidden');
+  // 退出其它模式，保证录到的画面干净
+  if (stepMode) exitStepMode();
+  if (compareMode) exitCompare();
+  hideCard();
+  hideSubjectIntro();
+  try {
+    const blob = await viewer.record(REC_SECONDS, (p) => {
+      bar.style.width = `${p * 100}%`;
+      label.textContent = `正在录制 ${recFmt(p * REC_SECONDS)} / ${recFmt(REC_SECONDS)}`;
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${current.id}-teardown.webm`;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast(`拆解录像已下载 ✓（WebM，${(blob.size / 1024 / 1024).toFixed(1)} MB）`);
+  } catch (e) {
+    toast((e as Error).message || '录制失败');
+  } finally {
+    overlay.setAttribute('hidden', '');
+    btn.disabled = false;
+    // 复位爆炸滑块，与录制结束的状态保持一致
+    const ex = document.getElementById('explode') as HTMLInputElement;
+    ex.value = '0';
+    (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
+  }
 });
 
 document.getElementById('btn-shot')!.addEventListener('click', () => {
@@ -742,7 +836,23 @@ addEventListener('keydown', (ev) => {
 // 既是分享深链接，也是截图脚本控制初始视图的入口
 const params = new URLSearchParams(location.search);
 const wanted = params.get('subject');
-const initial = SUBJECTS.find((s) => s.id === wanted) ?? SUBJECTS[0];
+// 支持 ?subject=gen-xxx：从本地记录的上一次输入重建（同浏览器内有效）
+let restoredQuery: string | null = null;
+if (wanted?.startsWith('gen-')) {
+  try {
+    restoredQuery = localStorage.getItem('ta:lastGen');
+  } catch {
+    /* ignore */
+  }
+}
+const initial =
+  SUBJECTS.find((s) => s.id === wanted) ??
+  (restoredQuery ? (() => {
+    const g = generateSubject(restoredQuery);
+    dynamicSubjects.push(g);
+    return g;
+  })() : undefined) ??
+  SUBJECTS[0];
 loadSubject(initial.id);
 
 const exRaw = params.get('explode');

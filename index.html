@@ -58,6 +58,14 @@
           <h1 class="hero-title">把科技产品<span>拆开看</span></h1>
           <p class="hero-sub">基于公开规格与权威拆解的参数化重建 · 可旋转 · 可爆炸 · 可剖切</p>
           <div id="hero-cards" class="hero-cards"></div>
+          <div class="hero-gen">
+            <div class="hero-gen-kicker">或者，随便输入一个产品名</div>
+            <div class="hero-gen-row">
+              <input id="gen-input" type="text" maxlength="40" placeholder="例如：扫地机器人 / 电饭煲 / 自行车 / 打印机" autocomplete="off" />
+              <button id="gen-btn" class="hero-gen-btn">生成拆解</button>
+            </div>
+            <div class="hero-gen-note">通用模板重建 · 结构示意图 · 非真实规格（演示用）</div>
+          </div>
           <div class="hero-foot">
             选一台开始
             <button id="hero-enter" class="hero-enter">直接进入工坊 →</button>
@@ -167,6 +175,10 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h16M4 18h7"/></svg>
                   <span class="btn-txt">分步</span>
                 </button>
+                <button id="btn-record" class="mini">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+                  录像
+                </button>
                 <button id="btn-shot" class="mini">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
                   导出 PNG
@@ -204,6 +216,18 @@
             <h3 id="hotcard-title"></h3>
             <div id="hotcard-body"></div>
             <div id="hotcard-stats"></div>
+          </div>
+
+          <!-- 录制进度遮罩 -->
+          <div id="rec-overlay" hidden>
+            <div class="rec-card">
+              <div class="rec-head">
+                <span class="rec-dot"></span>
+                <span id="rec-label">正在录制 00:00 / 00:24</span>
+              </div>
+              <div class="rec-track"><div id="rec-bar" class="rec-bar"></div></div>
+              <p class="rec-note">自动分步动画：装配自转 → 连续爆炸 → 爆炸态自转 → 收起。请保持本标签页在前台。</p>
+            </div>
           </div>
 
           <!-- 主体入场：产品页式 Hero 时刻 -->

@@ -90,6 +90,8 @@ export interface Subject {
   accent?: string;
   /** 是否展示剖切工具 */
   sectionable?: boolean;
+  /** 整体爆炸图（未选中层时的中央大图）。缺省时回退到 og/<id>.png */
+  heroImage?: string;
   /** iFixit 式可维护性 / 拆解难度评估 */
   repairability?: {
     /** 0–10，越高越易维护（iFixit 口径） */
