@@ -510,14 +510,72 @@ export function explodedSvg(
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-// ---------- 主体生成 ----------
+// ---------- 规格 → 主体（模板与 LLM 共用同一条路） ----------
 
-function pickBlueprint(query: string): Blueprint {
-  const q = query.toLowerCase();
-  for (const bp of BLUEPRINTS) {
-    if (bp.match.some((k) => q.includes(k.toLowerCase()))) return bp;
-  }
-  return DEFAULT_BLUEPRINT;
+/**
+ * 拆解规格：模板产出的蓝图和 LLM 产出的 JSON 都归一到这个结构，
+ * 再由 subjectFromSpec() 变成可渲染的 Subject。
+ * LLM 只需要填这个 schema，不需要知道 three.js。
+ */
+export interface LayerSpec {
+  id: string;
+  name: string;
+  group: string;
+  /** 这一层是什么 / 干什么 / 拆的时候要注意什么 */
+  body: string;
+  stats?: { label: string; value: string }[];
+  tools?: string[];
+  /** 主色，0xRRGGBB */
+  color?: number;
+  shape?: Shape;
+  size?: [number, number, number];
+  pos?: [number, number, number];
+  rot?: [number, number, number];
+  /** 额外装饰件（焊盘、接口、镜片等） */
+  extras?: Piece[];
+  stepTitle?: string;
+  explodeScale?: number;
+}
+
+export interface StepSpec {
+  title: string;
+  body: string;
+  layers: string[];
+  tools?: string[];
+  stats?: { label: string; value: string }[];
+}
+
+export interface TeardownSpec {
+  name?: string;
+  subtitle?: string;
+  tagline?: string;
+  accent?: string;
+  category?: string;
+  headline?: { label: string; value: string; unit?: string }[];
+  overview?: string;
+  narrative?: string[];
+  specs?: { label: string; value: string; note?: string }[];
+  repairability?: { score: number; difficulty: string; tools: string[]; note?: string };
+  layers: LayerSpec[];
+  steps?: StepSpec[];
+  /** 数据来源：template=通用模板（示意），ai=LLM 生成 */
+  source?: 'template' | 'ai';
+  sourceNote?: string;
+}
+
+const SHAPES: Shape[] = ['box', 'slab', 'cyl', 'lens', 'frame', 'blade'];
+
+function clamp(v: number, lo: number, hi: number, fallback: number): number {
+  return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : fallback;
+}
+
+function toVec3(v: unknown, fallback: [number, number, number]): [number, number, number] {
+  const a = Array.isArray(v) ? v : [];
+  return [
+    clamp(Number(a[0]), -3, 3, fallback[0]),
+    clamp(Number(a[1]), -3, 3, fallback[1]),
+    clamp(Number(a[2]), -3, 3, fallback[2]),
+  ];
 }
 
 function slugify(s: string): string {
@@ -531,102 +589,249 @@ function slugify(s: string): string {
   );
 }
 
-export function generateSubject(rawQuery: string): Subject {
-  const query = rawQuery.trim();
-  const bp = pickBlueprint(query);
-  const id = slugify(query);
-  const name = query.length > 28 ? `${query.slice(0, 28)}…` : query;
-  const n = bp.layers.length;
+/** 把一段（可能是 LLM 产出的）文本收敛成安全的纯文本 */
+function text(v: unknown, fallback = ''): string {
+  if (typeof v !== 'string') return fallback;
+  const t = v.replace(/\s+/g, ' ').trim();
+  return t.length > 400 ? `${t.slice(0, 400)}…` : t;
+}
 
-  const layers: Layer[] = bp.layers.map((l, i) => {
-    const refImage = explodedSvg(
-      name,
-      `${bp.label} · ${l.group} · 结构示意`,
-      [{ name: l.name, group: l.group, color: l.pieces[0]?.color ?? 0x4b5563 }]
-    );
+function statList(v: unknown): { label: string; value: string }[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((x) => x && typeof x === 'object')
+    .slice(0, 6)
+    .map((x) => ({ label: text((x as { label?: unknown }).label, '—'), value: text((x as { value?: unknown }).value, '—') }))
+    .filter((x) => x.label !== '—' || x.value !== '—');
+}
+
+function strList(v: unknown, max = 6): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((x) => text(x)).filter(Boolean).slice(0, max);
+}
+
+/** 规格 → 可渲染 Subject。size/pos 全部做了范围收敛，防止 LLM 给出离谱数值把场景撑爆 */
+export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
+  const query = text(rawQuery, '未命名产品') || '未命名产品';
+  const id = slugify(query);
+  const name = text(spec.name, query).slice(0, 28) || query.slice(0, 28);
+  const isAI = spec.source === 'ai';
+  const n = Math.max(3, Math.min(10, spec.layers.length));
+
+  const layers: Layer[] = spec.layers.slice(0, 10).map((l, i) => {
+    const lid = /^[a-z0-9_-]{1,24}$/.test(l.id) ? l.id : `l${i + 1}`;
+    const color = Number.isFinite(l.color) ? Number(l.color) & 0xffffff : 0x4b5563;
+    const shape: Shape = SHAPES.includes(l.shape as Shape) ? (l.shape as Shape) : 'box';
+    const size = toVec3(l.size, [1.2, 0.1, 0.9]) as [number, number, number];
+    // 尺寸下限保护：LLM 有时会给 0 导致几何体退化
+    const safeSize: [number, number, number] = [
+      clamp(size[0], 0.05, 3.2, 1.2),
+      clamp(size[1], 0.01, 3.2, 0.1),
+      clamp(size[2], 0.05, 3.2, 0.9),
+    ];
+    const pos = toVec3(l.pos, [0, (i - (n - 1) / 2) * 0.16, 0]) as [number, number, number];
+    const main: Piece = { shape, size: safeSize, pos, color };
+    if (l.rot) main.rot = toVec3(l.rot, [0, 0, 0]) as [number, number, number];
+    const extras = Array.isArray(l.extras)
+      ? l.extras.slice(0, 6).map((p) => ({
+          ...p,
+          size: toVec3(p.size, [0.1, 0.05, 0.1]) as [number, number, number],
+          pos: toVec3(p.pos, [0, 0, 0]) as [number, number, number],
+          color: Number.isFinite(p.color) ? Number(p.color) & 0xffffff : 0x4b5563,
+        }))
+      : [];
+    const pieces = [main, ...extras];
+    const body = text(l.body, `${text(l.name, '该层')}：通用结构层。`);
+
     const hotspots: Hotspot[] = [
       {
-        id: `${l.id}-main`,
-        title: l.name,
-        body: l.body,
-        anchor: new THREE.Vector3(
-          l.pieces[0]?.pos[0] ?? 0,
-          (l.pieces[0]?.pos[1] ?? 0) + 0.12,
-          l.pieces[0]?.pos[2] ?? 0
-        ),
-        stats: l.stats,
+        id: `${lid}-main`,
+        title: text(l.name, '结构层'),
+        body,
+        anchor: new THREE.Vector3(pos[0], pos[1] + safeSize[1] / 2 + 0.12, pos[2]),
+        stats: statList(l.stats),
       },
     ];
+
     return {
-      id: l.id,
-      name: l.name,
-      group: l.group,
-      explodeDir: new THREE.Vector3((i - (n - 1) / 2) * 0.34, 1.25 + i * 0.28, 0.16 * (i - (n - 1) / 2)),
-      explodeScale: l.explodeScale ?? 1,
+      id: lid,
+      name: text(l.name, `结构层 ${i + 1}`),
+      group: text(l.group, '结构'),
+      explodeDir: new THREE.Vector3(
+        (i - (n - 1) / 2) * 0.34,
+        1.25 + i * 0.28,
+        0.16 * (i - (n - 1) / 2)
+      ),
+      explodeScale: clamp(Number(l.explodeScale), 0.3, 3, 1),
       sectionable: true,
-      build: () => buildGroup(l.pieces),
+      build: () => buildGroup(pieces),
       hotspots,
-      refImage,
+      refImage: explodedSvg(name, `${text(l.group, '结构')} · 结构示意`, [
+        { name: text(l.name, `结构层 ${i + 1}`), group: text(l.group, '结构'), color },
+      ]),
     };
   });
 
-  const steps: TeardownStep[] = bp.layers.map((l, i) => ({
+  const stepSpecs: StepSpec[] =
+    Array.isArray(spec.steps) && spec.steps.length
+      ? spec.steps.slice(0, 12)
+      : spec.layers.map((l, i) => ({
+          title: text(l.stepTitle, `拆下 ${text(l.name, `第 ${i + 1} 层`)}`),
+          body: text(l.body, '按通用拆解流程处理这一层。'),
+          layers: [l.id],
+          tools: strList(l.tools),
+          stats: statList(l.stats),
+        }));
+
+  const steps: TeardownStep[] = stepSpecs.map((st, i) => ({
     id: `gen-s${i + 1}`,
-    title: l.stepTitle,
-    body: `${l.body}（通用模板步骤，实际拆解请以该产品的官方维修手册为准。）`,
-    layers: [l.id],
-    tools: l.tools,
-    stats: l.stats,
+    title: text(st.title, `步骤 ${i + 1}`),
+    body: text(st.body, '按通用拆解流程处理。'),
+    layers: strList(st.layers, 6).filter((x) => layers.some((l) => l.id === x)),
+    tools: strList(st.tools),
+    stats: statList(st.stats),
   }));
 
-  const heroImage = explodedSvg(name, `${bp.label} · ${n} 个结构层 · 通用模板重建`, [
-    ...bp.layers.map((l) => ({ name: l.name, group: l.group, color: l.pieces[0]?.color ?? 0x4b5563 })),
-  ]);
+  const heroImage = explodedSvg(
+    name,
+    `${text(spec.category, '设备')} · ${n} 个结构层 · ${isAI ? 'AI 生成' : '通用模板重建'}`,
+    layers.map((l) => ({ name: l.name, group: l.group, color: 0x4b5563 }))
+  );
 
-  const modeledParts = bp.layers.reduce((acc, l) => acc + l.pieces.length, 0);
+  const modeledParts = layers.reduce(
+    (acc, l, i) => acc + 1 + (Array.isArray(spec.layers[i]?.extras) ? spec.layers[i].extras!.length : 0),
+    0
+  );
+
+  const trustRow = isAI
+    ? { label: '规格可信度', value: '中', note: 'AI 生成，未经权威拆解资料核对' }
+    : { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' };
 
   return {
     id,
     name,
-    subtitle: `${bp.label} · 通用模板重建`,
-    tagline: `按通用模板重建的 ${n} 层结构示意，用于演示拆解呈现方式`,
-    headline: [
-      { label: '结构层', value: String(n), unit: '层' },
-      { label: '拆解步骤', value: String(n), unit: '步' },
-      { label: '形态', value: '示意' },
-      { label: '规格可信度', value: '低' },
-    ],
+    subtitle: text(spec.subtitle, `${text(spec.category, '设备')} · ${isAI ? 'AI 生成' : '通用模板重建'}`),
+    tagline: text(spec.tagline, `${n} 个结构层的拆解呈现，用于演示交互与信息组织方式`),
+    headline:
+      Array.isArray(spec.headline) && spec.headline.length
+        ? spec.headline.slice(0, 4).map((h) => ({
+            label: text(h.label, '指标'),
+            value: text(h.value, '—'),
+            unit: h.unit ? text(h.unit) : undefined,
+          }))
+        : [
+            { label: '结构层', value: String(n), unit: '层' },
+            { label: '拆解步骤', value: String(steps.length), unit: '步' },
+            { label: '形态', value: isAI ? 'AI 生成' : '示意' },
+            { label: '规格可信度', value: isAI ? '中' : '低' },
+          ],
     background: 0x0c0e11,
-    accent: '#5b8cff',
+    accent: /^#[0-9a-fA-F]{6}$/.test(spec.accent ?? '') ? spec.accent! : '#5b8cff',
     camera: { position: [0, 0.9, 3.4], target: [0, 0, 0] },
     explodeScale: 1,
     sectionable: true,
     heroImage,
     layers,
     steps,
-    overview:
-      `这是针对「${query}」按**通用模板**自动生成的结构示意，不是该产品的真实规格。` +
-      `模板按${bp.label}的常见结构给出 ${n} 个层：${bp.layers.map((l) => l.name).join('、')}。` +
-      `所有层的形状、位置、参数均为示意，不能作为维修依据。`,
-    narrative: [
-      `**为什么是"示意"**：任意产品的真实拆解需要权威拆解资料支撑，通用模板只能给出这一类产品的常见结构。`,
-      `**能用的部分**：拆解呈现方式（层划分、爆炸方向、分步流程、参数卡）与真实主体完全一致，可以直接对照体验。`,
-      `**要做成真实规格**：需要接入 LLM + 权威资料检索，由后端代理调用（见仓库 GAP_ANALYSIS.md 的 MVP 方案）。`,
-    ],
-    specs: [
-      { label: '产品', value: name },
-      { label: '类别', value: bp.label },
-      { label: '结构层', value: `${n} 层` },
-      { label: '建模方式', value: '参数化重建 · 通用模板', note: '非真机扫描、非真实规格' },
-      { label: '参考图', value: '结构示意图', note: 'SVG 生成，非实拍照片' },
-      { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' },
-    ],
+    overview: text(
+      spec.overview,
+      isAI
+        ? `这是针对「${name}」由 AI 生成的结构拆解。层划分与参数来自模型归纳，未经权威拆解资料核对，仅供演示与参考。`
+        : `这是针对「${name}」按通用模板自动生成的结构示意，不是该产品的真实规格。`
+    ),
+    narrative:
+      Array.isArray(spec.narrative) && spec.narrative.length
+        ? spec.narrative.map((p) => text(p)).filter(Boolean).slice(0, 5)
+        : isAI
+          ? [
+              '**数据来源**：AI 依据该类产品的常见结构归纳，未经权威拆解资料核对。',
+              '**能用的部分**：层划分、爆炸方向、分步流程、参数卡与真实主体完全一致。',
+              '**注意**：具体螺丝数量、胶合方式、排线位置请以官方维修手册为准。',
+            ]
+          : [
+              '**为什么是"示意"**：任意产品的真实拆解需要权威拆解资料支撑，通用模板只能给出这一类产品的常见结构。',
+              '**能用的部分**：拆解呈现方式（层划分、爆炸方向、分步流程、参数卡）与真实主体完全一致。',
+              '**要做成真实规格**：接入 LLM 后端代理即可（见 worker/README.md）。',
+            ],
+    specs:
+      Array.isArray(spec.specs) && spec.specs.length
+        ? spec.specs
+            .slice(0, 10)
+            .map((r) => ({ label: text(r.label, '项'), value: text(r.value, '—'), note: r.note ? text(r.note) : undefined }))
+        : [
+            { label: '产品', value: name },
+            { label: '类别', value: text(spec.category, '设备') },
+            { label: '结构层', value: `${n} 层` },
+          ],
+    ...(spec.repairability && Number.isFinite(spec.repairability.score)
+      ? {
+          repairability: {
+            score: Math.max(0, Math.min(10, Math.round(spec.repairability.score))),
+            difficulty: text(spec.repairability.difficulty, '未知'),
+            tools: strList(spec.repairability.tools, 8),
+            note: text(spec.repairability.note, isAI ? 'AI 估计值，仅供参考' : '通用模板估计值'),
+          },
+        }
+      : {}),
     fidelity: {
       actualParts: 0,
-      source: '无（通用模板，无权威拆解资料）',
+      source: text(spec.sourceNote, isAI ? 'AI 生成，无权威拆解资料' : '无（通用模板，无权威拆解资料）'),
       modeledLayers: n,
       modeledParts,
-      note: '模板未对应任何具体机型的真实零件数。',
+      note: isAI
+        ? 'AI 未对应具体机型的真实零件数，此栏仅说明模型自身的表达规模。'
+        : '模板未对应任何具体机型的真实零件数。',
     },
   };
+}
+
+function pickBlueprint(query: string): Blueprint {
+  const q = query.toLowerCase();
+  for (const bp of BLUEPRINTS) {
+    if (bp.match.some((k) => q.includes(k.toLowerCase()))) return bp;
+  }
+  return DEFAULT_BLUEPRINT;
+}
+
+/** 本地模板生成（离线、确定性、无密钥） */
+export function generateSubject(rawQuery: string): Subject {
+  const query = rawQuery.trim();
+  const bp = pickBlueprint(query);
+  const spec: TeardownSpec = {
+    name: query.length > 28 ? `${query.slice(0, 28)}…` : query,
+    subtitle: `${bp.label} · 通用模板重建`,
+    tagline: `按通用模板重建的 ${bp.layers.length} 层结构示意，用于演示拆解呈现方式`,
+    category: bp.label,
+    source: 'template',
+    layers: bp.layers.map((l) => ({
+      id: l.id,
+      name: l.name,
+      group: l.group,
+      body: l.body,
+      stats: l.stats,
+      tools: l.tools,
+      color: l.pieces[0]?.color ?? 0x4b5563,
+      shape: l.pieces[0]?.shape ?? 'box',
+      size: l.pieces[0]?.size,
+      pos: l.pieces[0]?.pos,
+      extras: l.pieces.slice(1),
+      stepTitle: l.stepTitle,
+      explodeScale: l.explodeScale,
+    })),
+  };
+  const s = subjectFromSpec(query, spec);
+  // 模板路线保留更明确的免责叙述
+  s.overview =
+    `这是针对「${query}」按**通用模板**自动生成的结构示意，不是该产品的真实规格。` +
+    `模板按${bp.label}的常见结构给出 ${bp.layers.length} 个层：${bp.layers.map((l) => l.name).join('、')}。` +
+    `所有层的形状、位置、参数均为示意，不能作为维修依据。`;
+  s.specs = [
+    { label: '产品', value: s.name },
+    { label: '类别', value: bp.label },
+    { label: '结构层', value: `${bp.layers.length} 层` },
+    { label: '建模方式', value: '参数化重建 · 通用模板', note: '非真机扫描、非真实规格' },
+    { label: '参考图', value: '结构示意图', note: 'SVG 生成，非实拍照片' },
+    { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' },
+  ];
+  return s;
 }

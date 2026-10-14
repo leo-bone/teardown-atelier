@@ -1,0 +1,15 @@
+name = "teardown-atelier-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-09"
+
+# 非敏感配置直接写这里；密钥用 `wrangler secret put LLM_API_KEY` 单独设置
+[vars]
+# OpenAI 兼容接口。国内更便宜的选项见 README「换 LLM 供应商」
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+# 只允许你的站点跨域访问（逗号分隔可多个）。别退回 "*"，否则别人可以刷你的额度
+ALLOWED_ORIGIN = "https://leo-bone.github.io,http://localhost:5173,http://localhost:8787"
+
+# 免费额度观察用（可选）
+# [observability]
+# enabled = true

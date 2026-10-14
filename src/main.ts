@@ -5,9 +5,31 @@ import type { SubjectMeta } from './subjects';
 import type { Subject, TeardownStep } from './core/types';
 import { TOOLS, toolIdFor, toolsForSteps } from './data/tools';
 import { generateSubject } from './data/generator';
+import { pickProvider, remoteApiBase } from './data/provider';
 
 /** 每层的代表色，用于左栏色块 */
-const SWATCH: Record<string, string> = {
+
+/**
+ * 安全渲染一段可能来自 LLM 的文本：先整体转义 HTML，再把 **粗体** 还原成 <b>。
+ * 所有走 innerHTML 的正文都必须过这个函数，否则 LLM 产出就是注入面。
+ */
+function md(text: string): string {
+  const esc = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return esc.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+}
+
+/** 纯文本插值到 innerHTML 时用（不加粗） */
+function esc(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}const SWATCH: Record<string, string> = {
   cover: '#9fb8cc', display: '#1a2f3f', camera: '#4b5563', board: '#0e2f24',
   battery: '#b8bcc0', cooling: '#d08c4a', frame: '#b9c0c6', back: '#8a5a63',
   rf: '#2563eb',
@@ -60,7 +82,7 @@ function addTab(s: Subject) {
   if (tabsEl.querySelector(`[data-id="${s.id}"]`)) return;
   const b = document.createElement('button');
   b.className = 'tab';
-  b.innerHTML = `<span class="tab-idx">✦</span>${s.name}`;
+  b.innerHTML = `<span class="tab-idx">✦</span>${esc(s.name)}`;
   b.dataset.id = s.id;
   b.addEventListener('click', () => {
     skipIntro = true; // 顶栏切换不重复播入场动画
@@ -198,31 +220,72 @@ document.getElementById('btn-compare')!.addEventListener('click', () => {
 document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
 document.getElementById('btn-home')!.addEventListener('click', () => showHero());
 
-// ---------- 任意产品输入（MVP：通用模板生成） ----------
-function runGenerate(raw: string) {
+// ---------- 任意产品输入（MVP：本地模板 / 云端 AI 双路） ----------
+const genBtn = document.getElementById('gen-btn') as HTMLButtonElement;
+
+async function runGenerate(raw: string) {
   const q = raw.trim();
   if (!q) {
     toast('先输入一个产品名');
     return;
   }
-  const s = generateSubject(q);
-  if (!findSubject(s.id)) dynamicSubjects.push(s);
-  addTab(s);
+  const wantRemote =
+    (document.getElementById('gen-remote') as HTMLInputElement).checked && !!remoteApiBase();
+
+  genBtn.disabled = true;
+  genBtn.textContent = wantRemote ? 'AI 生成中…' : '生成中…';
   try {
-    localStorage.setItem('ta:lastGen', q);
-  } catch {
-    /* 隐私模式下忽略 */
+    const provider = pickProvider(wantRemote);
+    const s = await provider.generate(q);
+    if (!findSubject(s.id)) dynamicSubjects.push(s);
+    addTab(s);
+    try {
+      localStorage.setItem('ta:lastGen', q);
+    } catch {
+      /* 隐私模式下忽略 */
+    }
+    skipIntro = false;
+    hideHero();
+    void loadSubject(s.id);
+    toast(
+      provider.remote
+        ? `AI 已生成「${s.name}」· ${s.layers.length} 层（规格未经权威资料核对）`
+        : `已按通用模板生成「${s.name}」· ${s.layers.length} 层（示意）`
+    );
+  } catch (e) {
+    // 远端失败时静默回落到本地模板，保证功能永远可用
+    const s = generateSubject(q);
+    if (!findSubject(s.id)) dynamicSubjects.push(s);
+    addTab(s);
+    skipIntro = false;
+    hideHero();
+    void loadSubject(s.id);
+    toast(`远端生成失败（${(e as Error).message}），已回落到通用模板`);
+  } finally {
+    genBtn.disabled = false;
+    genBtn.textContent = '生成拆解';
   }
-  skipIntro = false;
-  hideHero();
-  void loadSubject(s.id);
-  toast(`已按通用模板生成「${s.name}」· ${s.layers.length} 层（示意）`);
 }
-document.getElementById('gen-btn')!.addEventListener('click', () => {
-  runGenerate((document.getElementById('gen-input') as HTMLInputElement).value);
+genBtn.addEventListener('click', () => {
+  void runGenerate((document.getElementById('gen-input') as HTMLInputElement).value);
 });
+// 只有云端代理「配好了密钥且探得通」才显示「AI 真实规格」开关，
+// 否则用户会看到一个点了必然失败的选项。
+{
+  const base = remoteApiBase();
+  if (base) {
+    fetch(`${base}/health`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { llmConfigured?: boolean } | null) => {
+        if (j?.llmConfigured) document.getElementById('gen-remote-wrap')!.removeAttribute('hidden');
+      })
+      .catch(() => {
+        /* 探不通就保持隐藏，走本地模板 */
+      });
+  }
+}
 document.getElementById('gen-input')!.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Enter') runGenerate((ev.target as HTMLInputElement).value);
+  if (ev.key === 'Enter') void runGenerate((ev.target as HTMLInputElement).value);
 });
 
 // ---------- 主体入场：产品页式 Hero 时刻 ----------
@@ -236,7 +299,7 @@ function showSubjectIntro(s: Subject) {
     .slice(0, 4)
     .map(
       (h) => `<div class="si-stat">
-        <span class="v">${h.value}</span><span class="u">${h.unit ?? ''}</span>
+        <span class="v">${esc(h.value)}</span><span class="u">${esc(h.unit ?? '')}</span>
         <span class="l">${h.label}</span>
       </div>`
     )
@@ -312,7 +375,7 @@ function renderInfo(s: Subject) {
     .map(
       (h) => `<div class="hl-item">
         <div class="hl-label">${h.label}</div>
-        <div class="hl-value">${h.value}<span class="hl-unit">${h.unit ?? ''}</span></div>
+        <div class="hl-value">${esc(h.value)}<span class="hl-unit">${esc(h.unit ?? '')}</span></div>
       </div>`
     )
     .join('');
@@ -338,7 +401,7 @@ function renderInfo(s: Subject) {
       row.dataset.id = l.id;
       row.innerHTML = `
         <span class="layer-swatch" style="background:${SWATCH[l.id] ?? '#94a3b8'}"></span>
-        <span class="layer-name">${l.name}</span>
+        <span class="layer-name">${esc(l.name)}</span>
         <button class="layer-eye" title="显示 / 隐藏">◉</button>`;
       row.addEventListener('click', (ev) => {
         if ((ev.target as HTMLElement).classList.contains('layer-eye')) {
@@ -365,8 +428,8 @@ function renderInfo(s: Subject) {
   st.innerHTML = s.specs
     .map(
       (r) => `<tr>
-        <td>${r.label}</td>
-        <td>${r.value}${r.note ? `<span class="note">${r.note}</span>` : ''}</td>
+        <td>${esc(r.label)}</td>
+        <td>${esc(r.value)}${r.note ? `<span class="note">${esc(r.note)}</span>` : ''}</td>
       </tr>`
     )
     .join('');
@@ -381,7 +444,7 @@ function renderInfo(s: Subject) {
     sc.dataset.tier = r.score >= 7 ? 'good' : r.score >= 4 ? 'mid' : 'poor';
     (document.getElementById('repair-diff') as HTMLElement).textContent = r.difficulty;
     (document.getElementById('repair-tools') as HTMLElement).innerHTML = r.tools
-      .map((t) => `<span class="tool-chip">${t}</span>`)
+      .map((t) => `<span class="tool-chip">${esc(t)}</span>`)
       .join('');
     (document.getElementById('repair-note') as HTMLElement).textContent = r.note ?? '';
   } else {
@@ -389,9 +452,9 @@ function renderInfo(s: Subject) {
   }
 
   // 概述 + 叙事
-  (document.getElementById('s-overview') as HTMLElement).innerHTML = `<p>${s.overview}</p>`;
+  (document.getElementById('s-overview') as HTMLElement).innerHTML = `<p>${md(s.overview)}</p>`;
   (document.getElementById('s-narrative') as HTMLElement).innerHTML = s.narrative
-    .map((p) => `<p>${p}</p>`)
+    .map((p) => `<p>${md(p)}</p>`)
     .join('');
 
   // 对比表
@@ -439,7 +502,7 @@ function renderInfo(s: Subject) {
     .map(
       (t) => `<figure class="tool-card">
         <img src="${t.image}" alt="${t.name}" loading="lazy" />
-        <figcaption><strong>${t.name}</strong><span>${t.note}</span></figcaption>
+        <figcaption><strong>${esc(t.name)}</strong><span>${esc(t.note)}</span></figcaption>
       </figure>`
     )
     .join('');
@@ -551,11 +614,11 @@ function showCard(
 ) {
   const titleEl = document.getElementById('hotcard-title') as HTMLElement;
   if (layerName && layerName !== title) {
-    titleEl.innerHTML = `<span class="hotcard-layer">${layerName}</span>${title}`;
+    titleEl.innerHTML = `<span class="hotcard-layer">${esc(layerName)}</span>${esc(title)}`;
   } else {
     titleEl.textContent = title;
   }
-  (document.getElementById('hotcard-body') as HTMLElement).innerHTML = body;
+  (document.getElementById('hotcard-body') as HTMLElement).innerHTML = md(body);
   const st = document.getElementById('hotcard-stats')!;
   st.innerHTML = (stats ?? [])
     .map((s) => `<div class="stat-row"><span class="k">${s.label}</span><span class="v">${s.value}</span></div>`)
@@ -624,8 +687,8 @@ function renderStep(i: number) {
 
   (document.getElementById('step-cur') as HTMLElement).textContent = String(stepIndex + 1);
   (document.getElementById('step-total') as HTMLElement).textContent = `/${steps.length}`;
-  (document.getElementById('step-title') as HTMLElement).textContent = st.title;
-  (document.getElementById('step-body') as HTMLElement).textContent = st.body;
+  (document.getElementById('step-title') as HTMLElement).innerHTML = esc(st.title);
+  (document.getElementById('step-body') as HTMLElement).innerHTML = md(st.body);
 
   const toolsEl = document.getElementById('step-tools')!;
   const hasTools = !!st.tools?.length;
@@ -637,7 +700,7 @@ function renderStep(i: number) {
           const img = def
             ? `<img class="tool-chip-img" src="${def.image}" alt="${def.name}" loading="lazy" />`
             : '';
-          return `<span class="tool-chip${def ? ' has-img' : ''}">${img}${t}</span>`;
+          return `<span class="tool-chip${def ? ' has-img' : ''}">${img}${esc(t)}</span>`;
         })
         .join('')
     : '';
@@ -652,7 +715,7 @@ function renderStep(i: number) {
   dotsEl.innerHTML = steps
     .map(
       (s, di) =>
-        `<button class="step-dot${di === stepIndex ? ' on' : ''}" data-i="${di}" title="${s.title}"></button>`
+        `<button class="step-dot${di === stepIndex ? ' on' : ''}" data-i="${di}" title="${esc(s.title)}"></button>`
     )
     .join('');
   dotsEl.querySelectorAll<HTMLButtonElement>('.step-dot').forEach((b) =>
