@@ -49,7 +49,10 @@ SUBJECTS.forEach((s, i) => {
   b.className = 'tab';
   b.innerHTML = `<span class="tab-idx">0${i + 1}</span>${s.name}`;
   b.dataset.id = s.id;
-  b.addEventListener('click', () => loadSubject(s.id));
+  b.addEventListener('click', () => {
+    skipIntro = true; // 顶栏切换不重复播入场动画
+    loadSubject(s.id);
+  });
   tabsEl.appendChild(b);
 });
 
@@ -71,6 +74,7 @@ SUBJECTS.forEach((s, i) => {
     <span class="hc-desc">${s.tagline}</span>
     <span class="hc-cta">查看拆解 →</span>`;
   card.addEventListener('click', () => {
+    skipIntro = false; // 从选择台进入，播一次入场
     loadSubject(s.id);
     hideHero();
   });
@@ -94,6 +98,10 @@ function setHero(src: string | null, cap: string) {
     heroShot.style.opacity = '0';
   }
   heroShotCap.textContent = cap;
+  // 换图时来一次轻淡入，读起来是"翻页"而不是硬替换
+  heroShot.classList.remove('swap');
+  void heroShot.offsetWidth;
+  heroShot.classList.add('swap');
 }
 /** 当前主体整体爆炸图（OG 预览图，作为未选中层时的默认大图） */
 function subjectHero(id: string): string {
@@ -163,6 +171,33 @@ document.getElementById('btn-compare')!.addEventListener('click', () => {
 
 document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
 document.getElementById('btn-home')!.addEventListener('click', () => showHero());
+
+// ---------- 主体入场：产品页式 Hero 时刻 ----------
+const introEl = document.getElementById('subject-intro') as HTMLElement;
+let skipIntro = false;
+
+function showSubjectIntro(s: Subject) {
+  (document.getElementById('si-title') as HTMLElement).textContent = s.name;
+  (document.getElementById('si-sub') as HTMLElement).textContent = `${s.subtitle} · ${s.tagline}`;
+  (document.getElementById('si-stats') as HTMLElement).innerHTML = s.headline
+    .slice(0, 4)
+    .map(
+      (h) => `<div class="si-stat">
+        <span class="v">${h.value}</span><span class="u">${h.unit ?? ''}</span>
+        <span class="l">${h.label}</span>
+      </div>`
+    )
+    .join('');
+  (document.querySelector('.si-bg') as HTMLElement).style.backgroundImage = `url("${assembledHero(s.id)}")`;
+  introEl.removeAttribute('hidden');
+}
+function hideSubjectIntro() {
+  introEl.setAttribute('hidden', '');
+}
+document.getElementById('si-enter')!.addEventListener('click', hideSubjectIntro);
+introEl.addEventListener('click', (ev) => {
+  if (ev.target === introEl || (ev.target as HTMLElement).classList.contains('si-bg')) hideSubjectIntro();
+});
 
 // ---------- 分享（易传播） ----------
 function shareUrlFor(id: string): string {
@@ -357,6 +392,21 @@ function renderInfo(s: Subject) {
   tabsEl.querySelectorAll('.tab').forEach((t) => {
     t.classList.toggle('active', (t as HTMLElement).dataset.id === s.id);
   });
+
+  staggerPanels();
+}
+
+/** 切换主体时，左右栏面板错落淡入 */
+function staggerPanels() {
+  ['sidebar', 'inspector'].forEach((id) => {
+    const root = document.getElementById(id)!;
+    root.querySelectorAll(':scope > .panel').forEach((p, i) => {
+      (p as HTMLElement).style.setProperty('--i', String(i));
+    });
+    root.classList.remove('enter');
+    void root.offsetWidth; // 强制重排，让动画能重新触发
+    root.classList.add('enter');
+  });
 }
 
 // ---------- 加载主体 ----------
@@ -368,6 +418,10 @@ function loadSubject(id: string) {
   hideCard();
   if (compareMode) exitCompare();
   steps = buildSteps(s);
+  // 产品页式入场：首次进入 / 从选择台进入时播一次，顶栏切换不重复
+  if (skipIntro) hideSubjectIntro();
+  else showSubjectIntro(s);
+  skipIntro = false;
   // 渐入切换：先把视口淡出，装载完新主体后再淡入，读起来是平滑过渡而非硬切
   stage.classList.add('pre-load');
   viewer.load(s);
@@ -672,7 +726,11 @@ document.getElementById('pw-toggle')!.addEventListener('click', () => {
 // 键盘快捷
 addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement) return;
-  if (ev.key === 'Escape') { if (stepMode) exitStepMode(); else hideCard(); }
+  if (ev.key === 'Escape') {
+    if (!introEl.hasAttribute('hidden')) hideSubjectIntro();
+    else if (stepMode) exitStepMode();
+    else hideCard();
+  }
   if (ev.key === 'r' || ev.key === 'R') viewer.resetView();
   // 分步模式下用左右方向键翻步
   if (stepMode && ev.key === 'ArrowRight') renderStep(stepIndex + 1);
