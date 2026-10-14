@@ -84,6 +84,9 @@ export class TeardownViewer {
   private autoRotateWanted = true;
   /** 上一次重算影棚/阴影时的 explodeT，-1 表示需要重算 */
   private studioFittedAt = -1;
+  /** 主体包围球半径与相机基准距离，供 clampCameraToModel 使用 */
+  private modelRadius = 0;
+  private baseCamDist = 0;
   /** pointermove 只置位，射线检测在帧循环里做（见 pick()） */
   private pointerDirty = false;
   /** updateLabels 的缓存键，用来跳过没变化的帧 */
@@ -416,6 +419,11 @@ export class TeardownViewer {
     this.studioFittedAt = -1;
     this.invalidateShadows();
 
+    // 记录基准距离与包围球，之后每次 resize 都按当前视口比例重新夹紧
+    this.modelRadius = box.getBoundingSphere(new THREE.Sphere()).radius;
+    this.baseCamDist = camDistance;
+    this.clampCameraToModel();
+
     this.applyExplode();
     this.updateLabels();
   }
@@ -540,6 +548,8 @@ export class TeardownViewer {
     this.camera.position.set(...this.subject.camera.position);
     this.controls.target.set(...this.subject.camera.target);
     this.controls.update();
+    // 复位同样要走一遍夹紧，否则窄视口下复位又会切边
+    this.clampCameraToModel();
   }
 
   setSection(enabled: boolean, axis: 'x' | 'y' | 'z' = 'x', position = 0) {
@@ -831,7 +841,35 @@ export class TeardownViewer {
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
     if (this.gradePass) this.gradePass.uniforms['uResolution'].value.set(w, h);
+    // 视口变窄时水平视场跟着收，宽体主体（F-35 这类）会重新切边，这里重新夹紧
+    this.clampCameraToModel();
   };
+
+  /**
+   * 相机安全夹紧：保证主体的包围球完整落在视锥内。
+   *
+   * 为什么需要：小窗是竖长比例（372×392），水平视场比垂直窄，
+   * 而 F-35 的翼展 22 单位、iPhone 高 15 单位，按原先写死的相机距离会切边。
+   * 3D 小窗缩到右下角之后这个问题才暴露出来。
+   *
+   * 只用包围球、不用包围盒：球与朝向无关，任意方位角都不会切。
+   * 只往外推、不往里拉——已经够远的主体保持原样，观感不变。
+   */
+  private clampCameraToModel() {
+    if (!this.modelRadius || !this.baseCamDist) return;
+    const vFov = (this.camera.fov * Math.PI) / 180;
+    const aspect = Math.max(0.2, this.camera.aspect);
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+    const theta = Math.min(vFov, hFov) / 2;
+    // 1.06 = 留 6% 余量，贴边切线差一点视觉上就是"顶到框"
+    const need = (this.modelRadius / Math.sin(theta)) * 1.06;
+    const dist = Math.max(this.baseCamDist, need);
+    const dir = this.camera.position.clone().sub(this.controls.target);
+    if (dir.lengthSq() < 1e-8) return;
+    dir.setLength(dist);
+    this.camera.position.copy(this.controls.target).add(dir);
+    this.controls.update();
+  }
 
   /**
    * 导出当前画面为 PNG data URL。

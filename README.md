@@ -20,16 +20,18 @@
 | [`?section=x&explode=60`](https://leo-bone.github.io/teardown-atelier/?section=x&explode=60) | X 轴剖切 + 60% 爆炸 |
 | [`?photo=0`](https://leo-bone.github.io/teardown-atelier/?photo=0) | 素图模式（关景深/辉光/影调，更流畅） |
 
-## 六个主体
+## 八个主体
 
-| 主体 | 层数 | 关键结构 |
-|---|---|---|
-| **iPhone 18 Pro** | 9 | 6 叶片机械光圈、WMCM 侧边封装、均热板、5567mAh 电池 |
-| **NVIDIA Rubin VR200** | 6 | 四 compute tile、8 组 HBM4、CoWoS 中介层 |
-| **SpaceX Starship V3** | 6 | Super Heavy 33 台 + Ship 6 台猛禽、隧道管、内藏式栅格舵 |
-| **DJI Mavic 4 Pro** | 7 | 云台三摄、电机、O4 图传、遥控器 |
-| **F-35A Lightning II** | 7 | 隐身棱线、APG-81 AESA、EOTS/DAS、F135 单发、内置弹舱 |
-| **Porsche 911 Carrera S** | 6 | 3.0T 水平对置六缸、8 速 PDK、前后混合胎、麦弗逊/多连杆 |
+| 主体 | 层数 | 步骤数 | 关键结构 |
+|---|---|---|---|
+| **iPhone 18 Pro** | 9 | 9 | 6 叶片机械光圈、WMCM 侧边封装、均热板、5567mAh 电池 |
+| **NVIDIA Rubin VR200** | 6 | 6 | 四 compute tile、8 组 HBM4、CoWoS 中介层 |
+| **SpaceX Starship V3** | 6 | 6 | Super Heavy 33 台 + Ship 6 台猛禽、隧道管、内藏式栅格舵 |
+| **DJI Mavic 4 Pro** | 7 | 7 | 云台三摄、电机、O4 图传、遥控器 |
+| **F-35A Lightning II** | 7 | 7 | 隐身棱线、APG-81 AESA、EOTS/DAS、F135 单发、内置弹舱 |
+| **Porsche 911 Carrera S** | 6 | 6 | 3.0T 水平对置六缸、8 速 PDK、前后混合胎、麦弗逊/多连杆 |
+| **PlayStation 5 Pro** | 7 | 7 | 均热板 + 液态金属、390W 电源、60 CU APU、可拆卸光驱 |
+| **Sony A7 V** | 7 | 7 | 3300 万像素堆栈 CMOS、BIONZ XR、5 轴 IBIS、944 万点 EVF |
 
 每个主体带热点标注：点一下展开该层的工程说明与关键参数。
 

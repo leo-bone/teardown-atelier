@@ -55,6 +55,20 @@ export const SUBJECT_META: SubjectMeta[] = [
     tagline: '3.0T 水平对置六缸 480 PS，0–100 3.3s，极致平衡',
     accent: '#b11226',
   },
+  {
+    id: 'ps5',
+    name: 'PlayStation 5 Pro',
+    subtitle: 'Sony Interactive · 2024 年 11 月 · 第九世代高性能主机',
+    tagline: 'GPU 计算单元从 36 提到 60、带宽 +28%、390W 电源——同架构下的完全体',
+    accent: '#2b6cb0',
+  },
+  {
+    id: 'a7v',
+    name: 'Sony A7 V',
+    subtitle: 'Sony · 全画幅微单 · 第七代基准机型',
+    tagline: '3300 万像素堆栈 CMOS + BIONZ XR + 8 级五轴防抖，影像旗舰的工程基准',
+    accent: '#8a1c2b',
+  },
 ];
 
 /** 完整主体按需加载：动态 import 让每个主体成为独立 chunk，首屏只付当前那一个 */
@@ -65,6 +79,8 @@ const LOADERS: Record<string, () => Promise<Subject>> = {
   mavic4: () => import('./mavic4').then((m) => m.mavic4Pro()),
   f35: () => import('./f35').then((m) => m.f35LightningII()),
   porsche911: () => import('./porsche911').then((m) => m.porsche911()),
+  ps5: () => import('./ps5').then((m) => m.ps5Pro()),
+  a7v: () => import('./a7v').then((m) => m.sonyA7V()),
 };
 
 /** 已加载过的主体缓存，来回切换不重复解析 */
