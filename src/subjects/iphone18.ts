@@ -776,6 +776,12 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
       modeledParts: 139,
       note: 'iFixit 拆解实测：Pro 4288mAh / Pro Max 5567mAh（eSIM 版），6 叶片机械光圈，A20 Pro 改为 die 与内存并排封装。本模型表达的是 9 个功能子系统（显示 / 计算 / 光学 / 能源 / 热管理 / 结构 / 射频），不是零件级清单。1243 个表贴元件以「被动元件群」的示意形式出现，不逐个建模。',
     },
+    repairability: {
+      score: 7,
+      difficulty: '中等',
+      tools: ['加热台 / 热风枪', '吸盘 + 撬片', '精密螺丝刀（五角/十字）', '电池拉片 / 取胶工具', '屏幕分离夹具'],
+      note: 'iFixit 口径（参考近年 Pro 机型 7/10）：玻璃背板可开启更换电池、模块化程度高，但屏幕与电池仍需加热除胶、粘合剂多',
+    },
     layers,
     headline: [
       { label: '工艺', value: '2nm', unit: '台积电 N2' },

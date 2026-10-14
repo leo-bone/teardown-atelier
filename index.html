@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Teardown Atelier · 工程级 3D 拆解工坊</title>
+    <meta name="description" content="基于公开规格与权威拆解的参数化 3D 拆解工坊：可旋转、可爆炸、可剖切的工程级复刻。" />
+    <meta property="og:title" content="Teardown Atelier · 工程级 3D 拆解工坊" />
+    <meta property="og:description" content="基于公开规格与权威拆解的参数化 3D 拆解工坊：可旋转、可爆炸、可剖切。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://leo-bone.github.io/teardown-atelier/" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -20,6 +26,14 @@
         <nav id="tabs"></nav>
         <div class="topbar-right">
           <span class="badge">参数化重建 · 非真机扫描</span>
+          <div class="share-group">
+            <button id="btn-share" class="mini" title="复制分享链接">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+              <span>分享</span>
+            </button>
+            <a id="share-x" class="mini icon" target="_blank" rel="noopener" title="分享到 X">X</a>
+            <a id="share-wb" class="mini icon" target="_blank" rel="noopener" title="分享到微博">微</a>
+          </div>
           <button id="btn-home" class="mini" title="返回选择页">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
             <span>选择台</span>
@@ -54,6 +68,17 @@
             <p id="s-sub" class="muted"></p>
             <p id="s-tagline" class="tagline"></p>
             <div id="s-headline" class="headline"></div>
+            <div id="repair-block" class="repair-block">
+              <div class="repair-head">
+                <span class="repair-score" id="repair-score">—</span>
+                <div class="repair-meta">
+                  <span id="repair-diff" class="repair-diff"></span>
+                  <span class="repair-label">可维护性 / 拆解难度</span>
+                </div>
+              </div>
+              <div class="repair-tools" id="repair-tools"></div>
+              <p class="repair-note" id="repair-note"></p>
+            </div>
           </section>
 
           <section class="panel">
@@ -164,6 +189,7 @@
         </aside>
       </div>
     </div>
+    <div id="toast"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

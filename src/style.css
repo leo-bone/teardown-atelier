@@ -453,3 +453,38 @@ body {
   #body { grid-template-columns: 248px 1fr 296px; }
   #hotcard { width: 300px; }
 }
+
+/* ---------- iFixit 式可维护性 / 拆解难度 ---------- */
+.repair-block {
+  margin-top: 14px; padding: 12px 13px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--panel-2);
+}
+.repair-head { display: flex; align-items: center; gap: 12px; }
+.repair-score {
+  font-family: var(--mono); font-size: 30px; font-weight: 700; line-height: 1;
+  width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong); flex-shrink: 0;
+}
+.repair-score[data-tier="good"] { color: var(--green); background: rgba(74, 222, 128, 0.1); }
+.repair-score[data-tier="mid"] { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+.repair-score[data-tier="poor"] { color: var(--red); background: rgba(255, 107, 107, 0.1); }
+.repair-meta { display: flex; flex-direction: column; gap: 2px; }
+.repair-diff { font-size: 14px; font-weight: 700; }
+.repair-label { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.repair-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.tool-chip {
+  font-size: 10.5px; color: var(--text-mid); padding: 4px 8px; border-radius: 7px;
+  background: var(--panel-3); border: 1px solid var(--border);
+}
+.repair-note { font-size: 10.5px; color: var(--text-dim); margin-top: 10px; line-height: 1.5; }
+
+/* ---------- 分享 ---------- */
+.share-group { display: flex; align-items: center; gap: 6px; }
+.mini.icon { min-width: 30px; padding: 7px 9px; justify-content: center; font-weight: 700; }
+#toast {
+  position: fixed; left: 50%; bottom: 38px; transform: translateX(-50%) translateY(20px);
+  background: rgba(20, 24, 30, 0.96); color: var(--text); font-size: 13px; font-weight: 600;
+  padding: 11px 20px; border-radius: 11px; border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-2); opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 60;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

@@ -14,18 +14,22 @@
 |---|---|
 | [`?subject=starship`](https://leo-bone.github.io/teardown-atelier/?subject=starship) | 直接打开星舰 |
 | [`?subject=rubin`](https://leo-bone.github.io/teardown-atelier/?subject=rubin) | 直接打开 Rubin 芯片 |
+| [`?subject=f35`](https://leo-bone.github.io/teardown-atelier/?subject=f35) | 直接打开 F-35A 战斗机 |
+| [`?subject=porsche911`](https://leo-bone.github.io/teardown-atelier/?subject=porsche911) | 直接打开保时捷 911 |
 | [`?explode=100`](https://leo-bone.github.io/teardown-atelier/?explode=100) | 一进来就是完全爆炸态 |
 | [`?section=x&explode=60`](https://leo-bone.github.io/teardown-atelier/?section=x&explode=60) | X 轴剖切 + 60% 爆炸 |
 | [`?photo=0`](https://leo-bone.github.io/teardown-atelier/?photo=0) | 素图模式（关景深/辉光/影调，更流畅） |
 
-## 四个主体
+## 六个主体
 
-| 主体 | 层数 | 网格 | 三角面 | 关键结构 |
-|---|---|---|---|---|
-| **iPhone 18 Pro** | 9 | 139 | 32.4k | 6 叶片机械光圈、WMCM 侧边封装、均热板、5567mAh 电池 |
-| **NVIDIA Rubin VR200** | 6 | 319 | 6.2k | 四 compute tile、8 组 HBM4、CoWoS 中介层 |
-| **SpaceX Starship V3** | 6 | 652 | 57.3k | Super Heavy 33 台 + Ship 6 台猛禽、隧道管、内藏式栅格舵 |
-| **DJI Mavic 4 Pro** | 7 | 245 | 11.0k | 云台三摄、电机、O4 图传、遥控器 |
+| 主体 | 层数 | 关键结构 |
+|---|---|---|
+| **iPhone 18 Pro** | 9 | 6 叶片机械光圈、WMCM 侧边封装、均热板、5567mAh 电池 |
+| **NVIDIA Rubin VR200** | 6 | 四 compute tile、8 组 HBM4、CoWoS 中介层 |
+| **SpaceX Starship V3** | 6 | Super Heavy 33 台 + Ship 6 台猛禽、隧道管、内藏式栅格舵 |
+| **DJI Mavic 4 Pro** | 7 | 云台三摄、电机、O4 图传、遥控器 |
+| **F-35A Lightning II** | 7 | 隐身棱线、APG-81 AESA、EOTS/DAS、F135 单发、内置弹舱 |
+| **Porsche 911 Carrera S** | 6 | 3.0T 水平对置六缸、8 速 PDK、前后混合胎、麦弗逊/多连杆 |
 
 每个主体带热点标注：点一下展开该层的工程说明与关键参数。
 
@@ -36,8 +40,11 @@
 - **层控制** — 单独显隐、隔离单层、悬停高亮
 - **影调开关** — 摄影棚 / 素图两档（见下）
 - **导出 PNG** — 2× 超采样渲染后下载
-- **落地选择台** — 首页卡片式选择四台设备，可随时点顶栏「选择台」返回
-- **URL 深链接** — `?subject=starship&explode=60&section=x&photo=0`
+- **可维护性 / 拆解难度评分** — 对标 iFixit，给出 0–10 评分、难度与专用工具清单
+- **分享** — 一键复制深链接，直达 X / 微博；自带 Open Graph 卡片，链接预览即标题与参数
+- **落地选择台** — 首页卡片式选择设备，可随时点顶栏「选择台」返回
+- **URL 深链接** — `?subject=f35&explode=60&section=x&photo=0`
+- **待机自转** — 主体缓慢 turntable 旋转，拖动即停、松手恢复
 
 ## 渲染：为什么它看起来像照片
 

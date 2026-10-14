@@ -13,6 +13,12 @@ const SWATCH: Record<string, string> = {
   shield: '#2b2b2e', ship: '#b8bcc0', booster: '#a4a9ae', raptor: '#8a7a6a',
   hotstage: '#d0a050',
   frame2: '#2b2f33',
+  // F-35
+  fuselage: '#9aa0a4', canopy: '#1a2a38', avionics: '#1f6f7a', engine: '#8a7d6e',
+  bays: '#14181d', wings: '#9aa0a4', gear: '#6a7075',
+  // Porsche 911
+  body: '#b9bdc2', flat6: '#8a8f93', pdk: '#767b80', wheels: '#0d0f12',
+  suspension: '#7d8388', exhaust: '#8a8f93',
 };
 
 const viewport = document.getElementById('viewport') as HTMLElement;
@@ -75,6 +81,46 @@ function showHero() {
 
 document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
 document.getElementById('btn-home')!.addEventListener('click', () => showHero());
+
+// ---------- 分享（易传播） ----------
+function shareUrlFor(id: string): string {
+  const base = `${location.origin}${location.pathname}`;
+  return `${base}?subject=${id}`;
+}
+let toastTimer: number | undefined;
+function toast(msg: string) {
+  const t = document.getElementById('toast') as HTMLElement;
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => t.classList.remove('show'), 1800);
+}
+function updateShareMeta(s: Subject) {
+  const url = shareUrlFor(s.id);
+  document.title = `${s.name} · Teardown Atelier`;
+  const ogTitle = document.querySelector('meta[property="og:title"]') as HTMLMetaElement | null;
+  const ogDesc = document.querySelector('meta[property="og:description"]') as HTMLMetaElement | null;
+  if (ogTitle) ogTitle.content = `${s.name} · Teardown Atelier`;
+  if (ogDesc) ogDesc.content = s.tagline;
+  const x = document.getElementById('share-x') as HTMLAnchorElement | null;
+  const wb = document.getElementById('share-wb') as HTMLAnchorElement | null;
+  const text = encodeURIComponent(`${s.name} · 工程级 3D 拆解：${s.tagline}`);
+  if (x) x.href = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
+  if (wb) wb.href = `https://service.weibo.com/share/share.php?title=${text}&url=${encodeURIComponent(url)}`;
+}
+document.getElementById('btn-share')!.addEventListener('click', async () => {
+  const url = shareUrlFor(current.id);
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: document.title, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast('分享链接已复制 ✓');
+  } catch {
+    toast('复制失败，请手动复制地址栏链接');
+  }
+});
 
 // ---------- 渲染主体信息 ----------
 function renderInfo(s: Subject) {
@@ -146,6 +192,23 @@ function renderInfo(s: Subject) {
     )
     .join('');
 
+  // iFixit 式可维护性 / 拆解难度
+  const rp = document.getElementById('repair-block')!;
+  if (s.repairability) {
+    rp.style.display = '';
+    const r = s.repairability;
+    const sc = document.getElementById('repair-score') as HTMLElement;
+    sc.textContent = `${r.score}`;
+    sc.dataset.tier = r.score >= 7 ? 'good' : r.score >= 4 ? 'mid' : 'poor';
+    (document.getElementById('repair-diff') as HTMLElement).textContent = r.difficulty;
+    (document.getElementById('repair-tools') as HTMLElement).innerHTML = r.tools
+      .map((t) => `<span class="tool-chip">${t}</span>`)
+      .join('');
+    (document.getElementById('repair-note') as HTMLElement).textContent = r.note ?? '';
+  } else {
+    rp.style.display = 'none';
+  }
+
   // 概述 + 叙事
   (document.getElementById('s-overview') as HTMLElement).innerHTML = `<p>${s.overview}</p>`;
   (document.getElementById('s-narrative') as HTMLElement).innerHTML = s.narrative
@@ -211,6 +274,7 @@ function loadSubject(id: string) {
   (lb.querySelector('.btn-txt') as HTMLElement).textContent = '标注';
   lb.classList.add('on');
   renderInfo(s);
+  updateShareMeta(s);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
   (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('active', 'solo'));
