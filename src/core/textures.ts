@@ -354,10 +354,10 @@ export function contactShadowTexture(): THREE.Texture {
     c.width = c.height = S;
     const ctx = c.getContext('2d')!;
     const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
-    g.addColorStop(0.0, 'rgba(12,16,22,0.62)');
-    g.addColorStop(0.42, 'rgba(12,16,22,0.36)');
-    g.addColorStop(0.72, 'rgba(12,16,22,0.12)');
-    g.addColorStop(1.0, 'rgba(12,16,22,0.0)');
+    g.addColorStop(0.0, 'rgba(10,14,20,0.72)');
+    g.addColorStop(0.32, 'rgba(10,14,20,0.42)');
+    g.addColorStop(0.6, 'rgba(10,14,20,0.14)');
+    g.addColorStop(0.9, 'rgba(10,14,20,0.0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, S, S);
     const t = new THREE.CanvasTexture(c);

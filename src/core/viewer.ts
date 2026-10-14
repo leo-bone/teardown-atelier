@@ -80,6 +80,8 @@ export class TeardownViewer {
   private bloomPass: UnrealBloomPass | null = null;
   private gradePass: ShaderPass | null = null;
   private photoGrade = true;
+  /** 用户是否希望待机自转（UI 开关；为 false 时即使松手也不恢复） */
+  private autoRotateWanted = true;
   /** 上一次重算影棚/阴影时的 explodeT，-1 表示需要重算 */
   private studioFittedAt = -1;
   /** pointermove 只置位，射线检测在帧循环里做（见 pick()） */
@@ -154,6 +156,12 @@ export class TeardownViewer {
     this.controls.dampingFactor = 0.075;
     this.controls.rotateSpeed = 0.85;
     this.controls.zoomSpeed = 0.9;
+    // 待机自动旋转（turntable）：产品级查看器的标配观感——主体缓慢自转，
+    // 用户一拖拽就暂停、松手后恢复，既不抢操作也不显死板。
+    this.controls.autoRotate = true;
+    this.controls.autoRotateSpeed = 0.55;
+    this.controls.addEventListener('start', () => { this.controls.autoRotate = false; });
+    this.controls.addEventListener('end', () => { if (this.autoRotateWanted) this.controls.autoRotate = true; });
 
     this.setupEnvironment();
     this.setupLights();
@@ -794,6 +802,16 @@ export class TeardownViewer {
 
   getPhotoGrade() {
     return this.photoGrade;
+  }
+
+  /** 待机自转开关。关掉后即使松手也不再恢复自转 */
+  setAutoRotate(on: boolean) {
+    this.autoRotateWanted = on;
+    this.controls.autoRotate = on;
+  }
+
+  getAutoRotate() {
+    return this.autoRotateWanted;
   }
 
   private onResize = () => {

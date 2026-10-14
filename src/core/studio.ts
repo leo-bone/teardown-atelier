@@ -302,16 +302,19 @@ export function createStudio(): Studio {
       group.position.set(center.x, box.min.y - 0.004, center.z);
       group.scale.setScalar(r);
 
-      // 反光盘：半径略大于主体脚印，倒影才不会在边缘被切平
+      // 反光盘：半径略大于主体脚印，倒影才不会在边缘被切平。
+      // 圆角/位置都在 group 局部坐标里，会被 group.scale(=r) 整体放大，
+      // 所以 y 偏移要除以 r 抵消，否则反光板会浮在影棚罩地板之上
+      // （r 可达 14+，浮起 0.05+ 世界单位，肉眼可见的"悬空倒影"）。
       const footprint = Math.max(size.x, size.z) * 0.5;
       const rr = (footprint * 2.0) / r;
       reflector.scale.set(rr, rr, rr);
-      reflector.position.set(0, 0.004, 0);
+      reflector.position.set(0, 0.004 / r, 0);
 
       // 接触阴影大小随主体脚印（×1.9，略大于主体以获得自然衰减）
       const s = (footprint * 1.9) / r;
       shadow.scale.set(s, s, s);
-      shadow.position.set(0, 0.006, 0);
+      shadow.position.set(0, 0.006 / r, 0);
     },
     dispose() {
       (cove.geometry as THREE.BufferGeometry).dispose();

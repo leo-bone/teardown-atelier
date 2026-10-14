@@ -319,6 +319,13 @@ document.getElementById('btn-shot')!.addEventListener('click', () => {
   });
 });
 
+document.getElementById('btn-rotate')!.addEventListener('click', (ev) => {
+  const btn = ev.currentTarget as HTMLElement;
+  const next = !viewer.getAutoRotate();
+  viewer.setAutoRotate(next);
+  btn.classList.toggle('on', next);
+});
+
 document.getElementById('btn-labels')!.addEventListener('click', (ev) => {
   const btn = ev.currentTarget as HTMLElement;
   // 三态循环：圆点 → 全部文字 → 隐藏
