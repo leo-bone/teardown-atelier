@@ -25,6 +25,8 @@ const viewport = document.getElementById('viewport') as HTMLElement;
 const labels = document.getElementById('labels') as HTMLDivElement;
 const stage = document.getElementById('stage') as HTMLElement;
 const loading = document.getElementById('loading') as HTMLElement | null;
+const heroShot = document.getElementById('hero-shot') as HTMLImageElement;
+const heroShotCap = document.getElementById('hero-shot-cap') as HTMLElement;
 
 let current: Subject;
 let activeLayerId: string | null = null;
@@ -79,6 +81,22 @@ function hideHero() {
 }
 function showHero() {
   heroEl.classList.remove('hidden');
+}
+
+/** 切换中央真实拆解大图（图片为主布局的核心） */
+function setHero(src: string | null, cap: string) {
+  if (src) {
+    heroShot.src = src;
+    heroShot.style.opacity = '1';
+  } else {
+    heroShot.removeAttribute('src');
+    heroShot.style.opacity = '0';
+  }
+  heroShotCap.textContent = cap;
+}
+/** 当前主体整体爆炸图（OG 预览图，作为未选中层时的默认大图） */
+function subjectHero(id: string): string {
+  return `./og/${id}.png`;
 }
 
 document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
@@ -282,6 +300,8 @@ function loadSubject(id: string) {
   lb.classList.add('on');
   renderInfo(s);
   updateShareMeta(s);
+  // 图片为主：默认展示整体爆炸大图
+  setHero(subjectHero(s.id), `${s.name} · 整体爆炸图`);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
   (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('active', 'solo'));
@@ -319,15 +339,21 @@ function selectLayer(layerId: string, focus: boolean) {
   const hs = layer.hotspots?.[0];
   viewer.setLabelFocus(hs ? `${layerId}:${hs.id}` : null);
 
+  // 图片为主：中央大图切到该层的真实参考图（无则回退整体爆炸图）
+  if (layer.refImage) {
+    setHero(layer.refImage, `${layer.name} · 真实参考图`);
+  } else {
+    setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
+  }
+
   if (!hs) { hideCard(); return; }
-  showCard(hs.title, hs.body, hs.stats, layer.refImage, layer.name);
+  showCard(hs.title, hs.body, hs.stats, layer.name);
 }
 
 function showCard(
   title: string,
   body: string,
   stats?: { label: string; value: string }[],
-  refImage?: string,
   layerName?: string
 ) {
   const titleEl = document.getElementById('hotcard-title') as HTMLElement;
@@ -342,28 +368,15 @@ function showCard(
     .map((s) => `<div class="stat-row"><span class="k">${s.label}</span><span class="v">${s.value}</span></div>`)
     .join('');
 
-  const refWrap = document.getElementById('hotcard-ref-wrap') as HTMLElement;
-  const refImg = document.getElementById('hotcard-ref') as HTMLImageElement;
-  if (refImage) {
-    refImg.src = refImage;
-    refImg.alt = layerName ? `${layerName} 参考图` : '参考图';
-    refWrap.removeAttribute('hidden');
-  } else {
-    refImg.src = '';
-    refWrap.setAttribute('hidden', '');
-  }
-
   document.getElementById('hotcard')!.removeAttribute('hidden');
 }
 
 function hideCard() {
   document.getElementById('hotcard')!.setAttribute('hidden', '');
-  const refWrap = document.getElementById('hotcard-ref-wrap') as HTMLElement;
-  const refImg = document.getElementById('hotcard-ref') as HTMLImageElement;
-  refImg.src = '';
-  refWrap.setAttribute('hidden', '');
   activeLayerId = null;
   viewer.setLabelFocus(null);
+  // 取消选中：中央大图回到整体爆炸图
+  setHero(subjectHero(current.id), `${current.name} · 整体爆炸图`);
   document.querySelectorAll('.layer-item.active, .hotspot-label.active').forEach((e) =>
     e.classList.remove('active')
   );
@@ -444,6 +457,13 @@ document.getElementById('btn-show-all')!.addEventListener('click', () => {
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('hidden-layer'));
   viewer.isolate(null);
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('solo'));
+});
+
+// 3D 把玩小窗：收起 / 展开
+document.getElementById('pw-toggle')!.addEventListener('click', () => {
+  const pw = document.getElementById('play-widget') as HTMLElement;
+  const collapsed = pw.classList.toggle('collapsed');
+  (document.getElementById('pw-toggle') as HTMLElement).textContent = collapsed ? '+' : '—';
 });
 
 // 键盘快捷

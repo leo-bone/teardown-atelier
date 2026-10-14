@@ -90,6 +90,8 @@ export class TeardownViewer {
   private labelCacheKey = '';
   /** 可见性变化时自增，用于打脏 labelCacheKey */
   private labelsVersion = 0;
+  /** 容器尺寸变化观察器（图片为主布局下 3D 小窗需要） */
+  private resizeObserver?: ResizeObserver;
 
   constructor(container: HTMLElement, labelLayer: HTMLDivElement, cb: ViewerCallbacks = {}) {
     this.container = container;
@@ -175,6 +177,13 @@ export class TeardownViewer {
       this.setHover(null);
     });
     addEventListener('resize', this.onResize);
+
+    // 容器尺寸变化（例如图片为主布局下 3D 缩小成右下角小窗）也要重算渲染尺寸，
+    // 光靠 window resize 覆盖不到「容器变小但窗口没变」的情况
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.onResize());
+      this.resizeObserver.observe(this.container);
+    }
 
     this.renderer.setAnimationLoop(() => this.tick());
   }

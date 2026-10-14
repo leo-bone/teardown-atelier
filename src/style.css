@@ -183,15 +183,57 @@ body {
 #spec-table td:nth-child(2) { font-weight: 600; color: var(--text); }
 #spec-table .note { display: block; font-size: 10px; color: var(--text-dim); font-weight: 400; margin-top: 1px; }
 
-/* ---------- 视口 ---------- */
+/* ---------- 视口（图片为主） ---------- */
 #stage {
   position: relative; overflow: hidden;
-  background: radial-gradient(circle at 50% 38%, #fbfdff 0%, #e9eef4 70%, #dfe6ee 100%);
+  background: #0c0e11;
 }
-#viewport { position: absolute; inset: 0; transition: opacity .35s ease; }
+/* 中央真实拆解大图（主角） */
+#hero-shot-wrap {
+  position: absolute; inset: 0; margin: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 26px;
+}
+#hero-shot {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain; border-radius: 14px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .55);
+  background: #0c0e11;
+  transition: opacity .3s ease;
+}
+#hero-shot-cap {
+  position: absolute; left: 24px; bottom: 20px;
+  font-size: 12px; color: var(--text-mid); font-weight: 500;
+  background: rgba(16, 19, 23, .72); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 9px; backdrop-filter: blur(8px);
+  z-index: 2;
+}
+/* 3D 把玩小窗 */
+#play-widget {
+  position: absolute; right: 18px; bottom: 18px;
+  width: 372px; height: 392px;
+  background: rgba(16, 19, 23, .9); border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 16px; overflow: hidden;
+  box-shadow: var(--shadow-2); backdrop-filter: blur(14px);
+  z-index: 9;
+}
+#play-widget.collapsed { height: 38px; }
+.pw-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 38px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px; z-index: 12;
+  background: rgba(16, 19, 23, .92); border-bottom: 1px solid var(--border);
+}
+.pw-title { font-size: 11px; font-weight: 700; letter-spacing: .5px; color: var(--text-mid); }
+#play-widget .pw-bar .mini { padding: 3px 9px; font-size: 12px; line-height: 1; }
+#viewport { position: absolute; inset: 38px 0 96px 0; transition: opacity .35s ease; }
 #viewport canvas { display: block; }
 #stage.pre-load #viewport { opacity: 0; transition: none; }
-#labels { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+#labels { position: absolute; inset: 38px 0 96px 0; pointer-events: none; z-index: 5; }
+#play-widget.collapsed #viewport,
+#play-widget.collapsed #labels,
+#play-widget.collapsed #toolbar,
+#play-widget.collapsed #loading { display: none; }
 
 /* 热点标注：默认只显示圆点，文字仅在 hover / 选中 / 展开模式时出现。 */
 .hotspot-label {
@@ -229,14 +271,16 @@ body {
 }
 .hotspot-label.occluded { opacity: 0; pointer-events: none; }
 
-/* ---------- 工具条：底部居中悬浮玻璃 HUD ---------- */
+/* ---------- 工具条：把玩小窗底部 ---------- */
 #toolbar {
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: row; align-items: center; gap: 10px;
-  background: rgba(16, 19, 23, 0.82); border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px; padding: 10px 14px; z-index: 10;
-  box-shadow: var(--shadow-2); backdrop-filter: blur(14px);
+  position: absolute; bottom: 0; left: 0; right: 0; height: 96px;
+  display: flex; flex-wrap: wrap; align-content: center; gap: 7px;
+  background: rgba(16, 19, 23, .94); border-top: 1px solid var(--border);
+  padding: 8px 10px; z-index: 10; overflow-y: auto;
 }
+#play-widget #explode { min-width: 74px; }
+#play-widget .tool-group label { font-size: 9.5px; }
+#play-widget .tool-group + .tool-group { padding-left: 8px; }
 .tool-group { display: flex; align-items: center; gap: 6px; }
 .tool-group + .tool-group { padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, 0.08); }
 .tool-group label {
@@ -250,8 +294,8 @@ body {
 
 /* ---------- 信息卡：深色玻璃抽屉 ---------- */
 #hotcard {
-  position: absolute; bottom: 70px; left: 16px; width: 384px;
-  max-height: min(46%, 440px); overflow-y: auto;
+  position: absolute; bottom: 16px; left: 16px; width: 372px;
+  max-height: min(52%, 460px); overflow-y: auto;
   background: rgba(16, 19, 23, 0.88); border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px; padding: 16px; z-index: 12;
   box-shadow: var(--shadow-2); backdrop-filter: blur(16px);
