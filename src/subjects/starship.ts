@@ -55,6 +55,7 @@ export function starshipV3(): Subject {
   // ============ 1. Ship 上面级：热防护系统 ============
   layers.push({
     id: 'shield',
+    refImage: './ref/starship/shield.jpg',
     name: 'Ship 热防护瓦（TPS）',
     group: '热防护',
     explodeDir: U(1.15, 0.3, 0.3),
@@ -132,6 +133,7 @@ V3 的 TPS 在 Flight 11 基础上继续改：瓦片背衬引入名为 <b>"crunc
   // ============ 2. Ship 上面级结构 ============
   layers.push({
     id: 'ship',
+    refImage: './ref/starship/ship.jpg',
     name: 'Ship 上面级',
     group: '箭体',
     explodeDir: U(1.15, 0.9, 0),
@@ -273,6 +275,7 @@ NASA Artemis 登月架构完全押在这个能力上。`,
   // ============ 3. Super Heavy 助推器结构 ============
   layers.push({
     id: 'booster',
+    refImage: './ref/starship/booster.jpg',
     name: 'Super Heavy 助推器',
     group: '箭体',
     explodeDir: U(1.3, -0.5, 0),
@@ -400,6 +403,7 @@ NASA Artemis 登月架构完全押在这个能力上。`,
   // ============ 4. 33 台猛禽 3 发动机 ============
   layers.push({
     id: 'raptor',
+    refImage: './ref/starship/raptor.jpg',
     name: '猛禽 3 发动机 ×33',
     group: '推进',
     explodeDir: U(-1.1, -1.4, 0.55),
@@ -520,6 +524,7 @@ NASA Artemis 登月架构完全押在这个能力上。`,
   // ============ 5. Ship 上面级发动机（6 台：3 猛禽3 + 3 真空型） ============
   layers.push({
     id: 'shipengines',
+    refImage: './ref/starship/shipengines.jpg',
     name: 'Ship 发动机 ×6（3 海平面 + 3 真空）',
     group: '推进',
     explodeDir: U(-0.6, -1.55, 0.75),
@@ -661,6 +666,7 @@ V3 取消了发动机舱——现在是裸露的推力圆盘 + 一圈密封板�
   // ============ 6. 热分离结构 ============
   layers.push({
     id: 'hotstage',
+    refImage: './ref/starship/hotstage.jpg',
     name: '热分离（HOT-STAGING）结构',
     group: '分离',
     explodeDir: U(-0.75, -0.6, -0.85),

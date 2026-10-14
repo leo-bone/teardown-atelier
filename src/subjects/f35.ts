@@ -345,6 +345,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'fuselage',
+    refImage: './ref/f35/fuselage.jpg',
     name: '机身 / 气动与隐身外形',
     group: '结构',
     explodeDir: U(0, 1.6, 0),
@@ -371,6 +372,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'canopy',
+    refImage: './ref/f35/canopy.jpg',
     name: '座舱盖（气泡式）',
     group: '座舱',
     explodeDir: U(1.6, 1.4, 0),
@@ -396,6 +398,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'avionics',
+    refImage: './ref/f35/avionics.jpg',
     name: '航电与传感器（第五代大脑）',
     group: '航电',
     explodeDir: U(1.0, 0.6, 1.0),
@@ -446,6 +449,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'engine',
+    refImage: './ref/f35/engine.jpg',
     name: 'F135 发动机（单台加力涡扇）',
     group: '动力',
     explodeDir: U(-1.4, -1.2, 0.6),
@@ -476,6 +480,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'bays',
+    refImage: './ref/f35/bays.jpg',
     name: '内置弹舱（2 × 弹舱）',
     group: '武器',
     explodeDir: U(0.4, -1.4, 0),
@@ -502,6 +507,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'wings',
+    refImage: './ref/f35/wings.jpg',
     name: '主翼（梯形后掠）',
     group: '气动',
     explodeDir: U(-0.4, 0, 1.6),
@@ -526,6 +532,7 @@ export function f35LightningII(): Subject {
 
   layers.push({
     id: 'gear',
+    refImage: './ref/f35/gear.jpg',
     name: '起落架（前轮 + 2 主轮）',
     group: '结构',
     explodeDir: U(0, -1.8, 0),

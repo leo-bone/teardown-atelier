@@ -304,6 +304,7 @@ export function porsche911(): Subject {
 
   layers.push({
     id: 'body',
+    refImage: './ref/porsche911/body.jpg',
     name: '车身（标志性溜背轮廓）',
     group: '车身',
     explodeDir: U(0, 1.8, 0),
@@ -329,6 +330,7 @@ export function porsche911(): Subject {
 
   layers.push({
     id: 'flat6',
+    refImage: './ref/porsche911/flat6.jpg',
     name: '水平对置六缸（3.0T）',
     group: '动力',
     explodeDir: U(1.4, -0.8, 0),
@@ -363,6 +365,7 @@ export function porsche911(): Subject {
 
   layers.push({
     id: 'pdk',
+    refImage: './ref/porsche911/pdk.jpg',
     name: '8 速 PDK 双离合',
     group: '传动',
     explodeDir: U(0.6, -1.2, 0),
@@ -389,6 +392,7 @@ export function porsche911(): Subject {
 
   layers.push({
     id: 'wheels',
+    refImage: './ref/porsche911/wheels.jpg',
     name: '车轮与轮胎（20"/21" 混合）',
     group: '行走',
     explodeDir: U(0, -0.6, 1.8),
@@ -414,6 +418,7 @@ export function porsche911(): Subject {
 
   layers.push({
     id: 'suspension',
+    refImage: './ref/porsche911/suspension.jpg',
     name: '悬架（前麦弗逊 / 后多连杆）',
     group: '底盘',
     explodeDir: U(-1.2, -1.0, 0),
@@ -438,6 +443,7 @@ export function porsche911(): Subject {
 
   layers.push({
     id: 'exhaust',
+    refImage: './ref/porsche911/exhaust.jpg',
     name: '运动排气（双出尾管）',
     group: '动力',
     explodeDir: U(1.8, -0.4, 0),

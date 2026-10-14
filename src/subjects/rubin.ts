@@ -22,6 +22,7 @@ export function rubinVR200(): Subject {
   // ============ 1. HBM4 显存堆栈 ×8 ============
   layers.push({
     id: 'hbm',
+    refImage: './ref/rubin/hbm.jpg',
     name: 'HBM4 显存堆栈 ×8',
     group: '内存',
     explodeDir: U(0, 0, 2.6),
@@ -107,6 +108,7 @@ export function rubinVR200(): Subject {
   // ============ 2. CoWoS-L 中介层 ============
   layers.push({
     id: 'cowos',
+    refImage: './ref/rubin/cowos.jpg',
     name: 'CoWoS-L 中介层',
     group: '封装',
     explodeDir: U(0, 0, 1.15),
@@ -186,6 +188,7 @@ CoWoS 是台积电的 2.5D 封装平台，L 系列用<b>硅中介层 + 局部硅
   // ============ 3. 计算 die ×2 ============
   layers.push({
     id: 'compute',
+    refImage: './ref/rubin/compute.jpg',
     name: '计算 die ×2（reticle 级）',
     group: '计算核心',
     explodeDir: U(0, 0, 0.55),
@@ -279,6 +282,7 @@ TDP 从约 1200W 涨到约 2300W，接近翻倍——这是 22 TB/s 和 50 PFLOP
   // ============ 4. I/O die ×2 ============
   layers.push({
     id: 'iodie',
+    refImage: './ref/rubin/iodie.jpg',
     name: 'I/O die ×2',
     group: 'I/O',
     explodeDir: U(0, 0, 0.3),
@@ -347,6 +351,7 @@ I/O die 上还集成了 NVLink 6（3.6 TB/s/GPU）、PCIe、ConnectX-9 SuperNIC 
   // ============ 5. VR200 超级芯片（Vera CPU） ============
   layers.push({
     id: 'superchip',
+    refImage: './ref/rubin/superchip.jpg',
     name: 'VR200 超级芯片（Vera CPU）',
     group: '系统',
     explodeDir: U(0, -1.2, 0.15),
@@ -423,6 +428,7 @@ CPU 的节奏规律是"两代 GPU 换一代 CPU"：Grace 服务 Hopper 和 Black
   // ============ 6. 封装基板 ============
   layers.push({
     id: 'substrate',
+    refImage: './ref/rubin/substrate.jpg',
     name: '封装基板 + 供电',
     group: '封装',
     explodeDir: U(0, 0, -0.7),

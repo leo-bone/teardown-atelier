@@ -24,6 +24,7 @@ export function mavic4Pro(): Subject {
   // ============ 1. 四臂机架 + 折叠机构 ============
   layers.push({
     id: 'frame',
+    refImage: './ref/mavic4/frame.jpg',
     name: '四臂机架 + 折叠机构',
     group: '结构',
     explodeDir: U(0, -0.9, 0.5),
@@ -108,6 +109,7 @@ export function mavic4Pro(): Subject {
   // ============ 2. 动力系统：电机 + 折叠桨 ============
   layers.push({
     id: 'motors',
+    refImage: './ref/mavic4/motors.jpg',
     name: '无刷电机 ×4 + 折叠桨叶',
     group: '动力',
     explodeDir: U(0.4, 0.5, 0.9),
@@ -189,6 +191,7 @@ export function mavic4Pro(): Subject {
   // ============ 3. 三摄云台模组 ============
   layers.push({
     id: 'gimbal',
+    refImage: './ref/mavic4/gimbal.jpg',
     name: '三摄云台模组（360° 万象云台）',
     group: '光学',
     explodeDir: U(-0.85, 0.15, 0.75),
@@ -280,6 +283,7 @@ export function mavic4Pro(): Subject {
   // ============ 4. 1 英寸哈苏主摄传感器 ============
   layers.push({
     id: 'sensor',
+    refImage: './ref/mavic4/sensor.jpg',
     name: '1 英寸哈苏主摄传感器',
     group: '光学',
     explodeDir: U(-1.15, 0.45, 1.15),
@@ -367,6 +371,7 @@ export function mavic4Pro(): Subject {
   // ============ 5. 电池 95.3Wh ============
   layers.push({
     id: 'battery',
+    refImage: './ref/mavic4/battery.jpg',
     name: '智能飞行电池 95.3Wh',
     group: '能源',
     explodeDir: U(0.75, 0.6, -0.9),
@@ -432,6 +437,7 @@ export function mavic4Pro(): Subject {
   // ============ 6. 图传 + 感知系统 ============
   layers.push({
     id: 'link',
+    refImage: './ref/mavic4/link.jpg',
     name: 'O4+ 图传 + 全向感知',
     group: '通信',
     explodeDir: U(0.55, -0.45, -1.15),
@@ -514,6 +520,7 @@ export function mavic4Pro(): Subject {
   // ============ 7. 遥控器 ============
   layers.push({
     id: 'remote',
+    refImage: './ref/mavic4/remote.jpg',
     name: 'DJI RC 2 折叠遥控器',
     group: '操控',
     explodeDir: U(-0.6, -1.2, -0.75),
