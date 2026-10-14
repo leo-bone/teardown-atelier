@@ -52,6 +52,7 @@ export function iPhone18Pro(): Subject {
     name: '陶瓷盾前盖',
     group: '外观',
     explodeDir: U(0, 0, 1.6),
+    refImage: './ref/iphone18/cover.jpg',
     build() {
       const g = new THREE.Group();
       const geo = roundedBox(W, H, 0.13, 0.75, 5);
@@ -116,6 +117,7 @@ export function iPhone18Pro(): Subject {
     name: 'LTPO+ OLED 面板',
     group: '显示',
     explodeDir: U(0, 0, 1.0),
+    refImage: './ref/iphone18/display.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();
@@ -174,6 +176,7 @@ Pro Max 配这块屏 + A20 Pro 的能效提升，Apple 口径的混合使用续�
     name: '三摄模组 + 摄像头凸台',
     group: '光学',
     explodeDir: U(-1.0, 0.55, 0.55),
+    refImage: './ref/iphone18/camera.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();
@@ -310,6 +313,7 @@ Pro Max 有望独占<b>三星三层堆叠式图像传感器</b>（像素层下�
     name: 'A20 Pro 主板（2nm WMCM）',
     group: '计算',
     explodeDir: U(0.75, -0.9, 0.3),
+    refImage: './ref/iphone18/board.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();
@@ -423,6 +427,7 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
     name: '电池（iFixit 实测）',
     group: '能源',
     explodeDir: U(0.8, 0.85, 0),
+    refImage: './ref/iphone18/battery.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();
@@ -491,6 +496,7 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
     name: '液冷散热模组',
     group: '热管理',
     explodeDir: U(0, -1.1, 0.25),
+    refImage: './ref/iphone18/cooling.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();
@@ -566,6 +572,7 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
     name: '不锈钢中框',
     group: '结构',
     explodeDir: U(-1.25, 0, 0),
+    refImage: './ref/iphone18/frame.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();
@@ -647,6 +654,7 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
     name: '背板玻璃',
     group: '外观',
     explodeDir: U(0.4, 0, -1.15),
+    refImage: './ref/iphone18/back.jpg',
     build() {
       const g = new THREE.Group();
       const back = new THREE.Mesh(
@@ -700,6 +708,7 @@ WMCM 的收益是真实的：把 RAM 集成到与 CPU/GPU/NPU 同一片晶圆，
     name: '天线 / 无线充电模组',
     group: '射频',
     explodeDir: U(-0.4, -0.75, -0.55),
+    refImage: './ref/iphone18/rf.jpg',
     sectionable: true,
     build() {
       const g = new THREE.Group();

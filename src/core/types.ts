@@ -16,6 +16,8 @@ export interface Layer {
   build: () => THREE.Object3D;
   /** 热点标注锚点（局部坐标，相对层自身） */
   hotspots?: Hotspot[];
+  /** 该层真实 / AI 参考图（右侧说明卡展示，与 3D 模型对照） */
+  refImage?: string;
 }
 
 export interface Hotspot {
@@ -71,6 +73,17 @@ export interface Subject {
   accent?: string;
   /** 是否展示剖切工具 */
   sectionable?: boolean;
+  /** iFixit 式可维护性 / 拆解难度评估 */
+  repairability?: {
+    /** 0–10，越高越易维护（iFixit 口径） */
+    score: number;
+    /** 难度文字：极难 / 困难 / 中等 / 容易 */
+    difficulty: string;
+    /** 拆解/维护所需的专用工具或设备 */
+    tools: string[];
+    /** 评估口径说明（如"iFixit 实测"或"工程评估"） */
+    note?: string;
+  };
   /** 建模颗粒度披露：真实零件量 vs 模型表达的内容 */
   fidelity?: {
     actualParts: number;

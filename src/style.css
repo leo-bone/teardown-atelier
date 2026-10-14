@@ -276,6 +276,38 @@ body {
 .stat-row .k { color: var(--text-dim); flex-shrink: 0; }
 .stat-row .v { font-family: var(--mono); font-weight: 600; text-align: right; color: var(--text); }
 
+/* 真实 / AI 参考图（与 3D 模型对照） */
+#hotcard-ref-wrap {
+  margin: -4px 0 12px;
+  display: block;
+}
+#hotcard-ref-wrap[hidden] { display: none; }
+#hotcard-ref-wrap img {
+  width: 100%;
+  max-height: 210px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.25);
+}
+#hotcard-ref-wrap figcaption {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  opacity: 0.8;
+}
+.hotcard-layer {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+  letter-spacing: 0.02em;
+}
+
 /* ---------- 右栏内容 ---------- */
 .prose { font-size: 12px; color: var(--text-mid); line-height: 1.78; }
 .prose p { margin-bottom: 11px; }

@@ -320,21 +320,48 @@ function selectLayer(layerId: string, focus: boolean) {
   viewer.setLabelFocus(hs ? `${layerId}:${hs.id}` : null);
 
   if (!hs) { hideCard(); return; }
-  showCard(hs.title, hs.body, hs.stats);
+  showCard(hs.title, hs.body, hs.stats, layer.refImage, layer.name);
 }
 
-function showCard(title: string, body: string, stats?: { label: string; value: string }[]) {
-  (document.getElementById('hotcard-title') as HTMLElement).textContent = title;
+function showCard(
+  title: string,
+  body: string,
+  stats?: { label: string; value: string }[],
+  refImage?: string,
+  layerName?: string
+) {
+  const titleEl = document.getElementById('hotcard-title') as HTMLElement;
+  if (layerName && layerName !== title) {
+    titleEl.innerHTML = `<span class="hotcard-layer">${layerName}</span>${title}`;
+  } else {
+    titleEl.textContent = title;
+  }
   (document.getElementById('hotcard-body') as HTMLElement).innerHTML = body;
   const st = document.getElementById('hotcard-stats')!;
   st.innerHTML = (stats ?? [])
     .map((s) => `<div class="stat-row"><span class="k">${s.label}</span><span class="v">${s.value}</span></div>`)
     .join('');
+
+  const refWrap = document.getElementById('hotcard-ref-wrap') as HTMLElement;
+  const refImg = document.getElementById('hotcard-ref') as HTMLImageElement;
+  if (refImage) {
+    refImg.src = refImage;
+    refImg.alt = layerName ? `${layerName} 参考图` : '参考图';
+    refWrap.removeAttribute('hidden');
+  } else {
+    refImg.src = '';
+    refWrap.setAttribute('hidden', '');
+  }
+
   document.getElementById('hotcard')!.removeAttribute('hidden');
 }
 
 function hideCard() {
   document.getElementById('hotcard')!.setAttribute('hidden', '');
+  const refWrap = document.getElementById('hotcard-ref-wrap') as HTMLElement;
+  const refImg = document.getElementById('hotcard-ref') as HTMLImageElement;
+  refImg.src = '';
+  refWrap.setAttribute('hidden', '');
   activeLayerId = null;
   viewer.setLabelFocus(null);
   document.querySelectorAll('.layer-item.active, .hotspot-label.active').forEach((e) =>
