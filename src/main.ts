@@ -14,12 +14,27 @@ import { pickProvider, remoteApiBase } from './data/provider';
  * 所有走 innerHTML 的正文都必须过这个函数，否则 LLM 产出就是注入面。
  */
 function md(text: string): string {
-  const esc = text
+  // 先整体转义，再把"白名单"里的安全标签还原回来：
+  // 主题文案里故意用 <b>/<i>/<br>/<table> 做强调，AI 文案用 **加粗**。
+  // 任何不在白名单里的标签（如 <script>）都会被中和成纯文本，不会执行。
+  let out = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-  return esc.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  out = out
+    .replace(/&lt;b&gt;/g, '<b>')
+    .replace(/&lt;\/b&gt;/g, '</b>')
+    .replace(/&lt;i&gt;/g, '<i>')
+    .replace(/&lt;\/i&gt;/g, '</i>')
+    .replace(/&lt;br\s*\/?&gt;/g, '<br>')
+    .replace(/&lt;table&gt;/g, '<table>')
+    .replace(/&lt;\/table&gt;/g, '</table>')
+    .replace(/&lt;tr&gt;/g, '<tr>')
+    .replace(/&lt;\/tr&gt;/g, '</tr>')
+    .replace(/&lt;td&gt;/g, '<td>')
+    .replace(/&lt;\/td&gt;/g, '</td>');
+  return out.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
 }
 
 /** 纯文本插值到 innerHTML 时用（不加粗） */
@@ -269,18 +284,24 @@ async function runGenerate(raw: string) {
 genBtn.addEventListener('click', () => {
   void runGenerate((document.getElementById('gen-input') as HTMLInputElement).value);
 });
-// 只有云端代理「配好了密钥且探得通」才显示「AI 真实规格」开关，
-// 否则用户会看到一个点了必然失败的选项。
+// 只要配置了云端代理地址（window.TEARDOWN_API）就开放「AI 真实规格」开关，
+// 让用户随时能试；健康检查只用来补充状态提示，不再据此隐藏开关
+// （否则偶发超时/冷启动会让用户以为功能坏了）。
 {
   const base = remoteApiBase();
-  if (base) {
+  const wrap = document.getElementById('gen-remote-wrap');
+  const label = wrap?.querySelector('span');
+  if (base && wrap) {
+    wrap.removeAttribute('hidden');
     fetch(`${base}/health`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { llmConfigured?: boolean } | null) => {
-        if (j?.llmConfigured) document.getElementById('gen-remote-wrap')!.removeAttribute('hidden');
+        if (j && j.llmConfigured === false && label) {
+          label.textContent = 'AI 生成（云端未就绪，可能不可用）';
+        }
       })
       .catch(() => {
-        /* 探不通就保持隐藏，走本地模板 */
+        /* 探不通：开关仍开放，真正生成时再报错 */
       });
   }
 }
@@ -374,7 +395,7 @@ function renderInfo(s: Subject) {
   hl.innerHTML = s.headline
     .map(
       (h) => `<div class="hl-item">
-        <div class="hl-label">${h.label}</div>
+        <div class="hl-label">${esc(h.label)}</div>
         <div class="hl-value">${esc(h.value)}<span class="hl-unit">${esc(h.unit ?? '')}</span></div>
       </div>`
     )
@@ -621,7 +642,7 @@ function showCard(
   (document.getElementById('hotcard-body') as HTMLElement).innerHTML = md(body);
   const st = document.getElementById('hotcard-stats')!;
   st.innerHTML = (stats ?? [])
-    .map((s) => `<div class="stat-row"><span class="k">${s.label}</span><span class="v">${s.value}</span></div>`)
+    .map((s) => `<div class="stat-row"><span class="k">${esc(s.label)}</span><span class="v">${esc(s.value)}</span></div>`)
     .join('');
 
   document.getElementById('hotcard')!.removeAttribute('hidden');

@@ -260,7 +260,7 @@ const BLUEPRINTS: Blueprint[] = [
     ],
   },
   {
-    match: ['汽车', '轿车', 'suv', '电动车', '特斯拉', 'byd', '车'],
+    match: ['汽车', '轿车', 'suv', '电动车', '特斯拉', 'byd', '燃油车'],
     label: '汽车',
     layers: [
       {
@@ -386,6 +386,217 @@ const BLUEPRINTS: Blueprint[] = [
           { shape: 'slab', size: [0.16, 0.04, 0.9], pos: [0, 0, -0.62], color: 0x2b3138 },
         ], body: '表带是快拆设计，属于唯一可以无损自行更换的部分。', stats: [{ label: '更换', value: '快拆无损' }, { label: '材质', value: '硅胶 / 金属 / 皮革' }],
         stepTitle: '更换快拆表带', tools: ['无（快拆）'],
+      },
+    ],
+  },
+  {
+    match: ['相机', '单反', '微单', '镜头', '摄影机', 'camera', 'dslr', 'mirrorless'],
+    label: '相机 / 镜头',
+    layers: [
+      {
+        id: 'body', name: '机身与外壳', group: '结构', pieces: [
+          { shape: 'box', size: [2.4, 1.5, 0.9], pos: [0, 0, 0], color: 0x1c1f24, metalness: 0.5, roughness: 0.45 },
+          { shape: 'box', size: [0.7, 0.6, 0.4], pos: [1.0, 0.3, 0], color: 0x2a2e34 },
+        ], body: '机身是骨架与蒙皮，握持处包覆蒙皮、按键与转盘集成其上。单反有反光镜箱、微单取消反光镜以缩短法兰距。', stats: [{ label: '类型', value: '单反 / 微单' }, { label: '开盖', value: '底盖 + 侧盖' }],
+        stepTitle: '卸下外壳与握持蒙皮', tools: ['精密螺丝刀', '塑料撬片'],
+      },
+      {
+        id: 'sensor', name: '影像传感器（CMOS）', group: '光学', pieces: [
+          { shape: 'slab', size: [1.1, 0.06, 0.75], pos: [0, -0.1, 0], color: 0x14171c, metalness: 0.3, roughness: 0.3 },
+        ], body: 'CMOS 是相机的"底片"，对震动与静电极敏感。APS-C 与全画幅只是面积不同；清洁要一气呵成、避免划伤低通/保护玻璃。', stats: [{ label: '核心', value: 'CMOS 感光' }, { label: '注意', value: '静电 / 划伤' }],
+        stepTitle: '断开排线，取出传感器总成', tools: ['防静电镊子', '无尘环境'],
+      },
+      {
+        id: 'lens', name: '镜头组', group: '光学', pieces: [
+          { shape: 'cyl', size: [0.8, 1.4, 0.8], pos: [0, 0.3, 0.2], color: 0x0a0d11, rot: [Math.PI / 2, 0, 0] },
+          { shape: 'cyl', size: [0.5, 0.5, 0.5], pos: [0, 0.3, -0.4], color: 0x2c3036 },
+        ], body: '镜头是玻璃镜片组 + 对焦/防抖马达。卡口是机身与镜头的接口标准，不同品牌互不通用。', stats: [{ label: '组成', value: '镜片组 + 马达' }, { label: '接口', value: '卡口标准' }],
+        stepTitle: '旋下镜头（先关机释放卡口）', tools: ['镜头释放钮', '镜头后盖'],
+      },
+      {
+        id: 'viewfinder', name: '取景与显示', group: '显示', pieces: [
+          { shape: 'slab', size: [1.0, 0.05, 0.7], pos: [0, 0.55, -0.2], color: 0x0d1116 },
+          { shape: 'box', size: [0.4, 0.3, 0.3], pos: [-0.8, 0.6, 0], color: 0x1a1f25 },
+        ], body: 'EVF 电子取景器与背屏是取景与回放界面；微单用 EVF 取代单反的五棱镜。', stats: [{ label: '取景', value: 'EVF / 背屏' }, { label: '单反差异', value: '无五棱镜' }],
+        stepTitle: '拆取景器与背屏总成', tools: ['精密螺丝刀', '防静电镊子'],
+      },
+      {
+        id: 'board', name: '主板与图像处理器', group: '电子', pieces: [
+          { shape: 'slab', size: [1.6, 0.04, 1.1], pos: [0, -0.3, 0], color: 0x0f2f26 },
+          { shape: 'box', size: [0.4, 0.05, 0.4], pos: [0.4, -0.27, 0.2], color: 0x1b2228 },
+        ], body: '图像处理器（ISP / 引擎）把 CMOS 信号渲染成照片，是各家的算法护城河。', stats: [{ label: '核心', value: 'ISP 引擎' }, { label: '维修', value: '整板更换' }],
+        stepTitle: '断开排线，取出主板', tools: ['防静电镊子', '精密螺丝刀'],
+      },
+      {
+        id: 'battery', name: '电池与存储', group: '能源', pieces: [
+          { shape: 'box', size: [1.0, 0.4, 0.5], pos: [-0.6, -0.5, 0], color: 0xb9bdc2, metalness: 0.7, roughness: 0.35 },
+          { shape: 'box', size: [0.3, 0.1, 0.2], pos: [0.6, -0.5, 0], color: 0x1b2228 },
+        ], body: '锂电与 SD 卡槽都在手柄/底盖侧。插拔卡要断电，电池鼓包必须停用。', stats: [{ label: '存储', value: 'SD / CFexpress' }, { label: '安全', value: '先断电' }],
+        stepTitle: '取出电池与存储卡', tools: ['塑料撬棒'],
+      },
+    ],
+  },
+  {
+    match: ['游戏机', '游戏主机', 'ps5', 'switch', 'xbox', '主机', 'console', 'ps4', 'ps'],
+    label: '游戏主机',
+    layers: [
+      {
+        id: 'shell', name: '外壳与上盖', group: '结构', pieces: [
+          { shape: 'box', size: [3.0, 0.7, 2.6], pos: [0, 0.2, 0], color: 0x2b3138 },
+        ], body: '外壳多为卡扣 + 少量螺丝，拆前先找隐藏螺丝（常在脚垫 / 贴纸下）。', stats: [{ label: '固定', value: '卡扣 + 螺丝' }, { label: '注意', value: '隐藏螺丝' }],
+        stepTitle: '拆下外壳上盖', tools: ['精密螺丝刀', '塑料撬片'],
+      },
+      {
+        id: 'drive', name: '光驱 / 数字版', group: '读取', pieces: [
+          { shape: 'box', size: [2.2, 0.4, 1.4], pos: [0, -0.1, 0], color: 0x161a1f },
+          { shape: 'cyl', size: [0.5, 0.3, 0.5], pos: [0.6, 0, 0], color: 0x2a2e34, rot: [Math.PI / 2, 0, 0] },
+        ], body: '光驱是故障高发件，数字版则省掉它换更大散热空间。', stats: [{ label: '版本', value: '光驱 / 数字' }, { label: '高发故障', value: '光驱' }],
+        stepTitle: '取出光驱模块', tools: ['精密螺丝刀', '防静电镊子'],
+      },
+      {
+        id: 'board', name: '主板与 APU', group: '电子', pieces: [
+          { shape: 'slab', size: [2.4, 0.06, 2.0], pos: [0, -0.4, 0], color: 0x0f2f26 },
+          { shape: 'box', size: [0.7, 0.08, 0.7], pos: [0, -0.36, 0], color: 0x1b2228 },
+        ], body: 'APU（CPU+GPU 合一）是核心，焊在主板上，过热与虚焊是主因。', stats: [{ label: '核心', value: 'APU 合一' }, { label: '维修', value: '整板更换' }],
+        stepTitle: '断开排线，取出主板', tools: ['防静电镊子', '精密螺丝刀'],
+      },
+      {
+        id: 'cooling', name: '散热模组', group: '热学', pieces: [
+          { shape: 'box', size: [0.9, 0.3, 0.9], pos: [0, -0.1, 0.4], color: 0xc9a06a, metalness: 0.85, roughness: 0.3 },
+          { shape: 'cyl', size: [0.1, 0.2, 0.1], pos: [0, 0.1, 0.9], color: 0x8f98a1, metalness: 0.85, rot: [Math.PI / 2, 0, 0] },
+        ], body: '均热板 + 涡轮风扇把 APU 热量排出；清灰换硅脂是延寿第一招。', stats: [{ label: '维护', value: '清灰 / 换硅脂' }, { label: '周期', value: '1–2 年' }],
+        stepTitle: '拆散热模组，清灰换硅脂', tools: ['精密螺丝刀', '导热硅脂'],
+      },
+      {
+        id: 'power', name: '电源', group: '能源', pieces: [
+          { shape: 'box', size: [1.6, 0.5, 1.2], pos: [-0.6, -0.7, 0], color: 0x9aa0a6, metalness: 0.85 },
+        ], body: '电源把市电转成主板/硬盘所需直流；电容老化会啸叫或掉电。', stats: [{ label: '作用', value: 'AC→DC' }, { label: '老化', value: '电容' }],
+        stepTitle: '断开供电，取出电源', tools: ['精密螺丝刀'],
+      },
+      {
+        id: 'io', name: '接口与手柄', group: '输入', pieces: [
+          { shape: 'box', size: [2.0, 0.15, 0.3], pos: [0, -0.7, 1.1], color: 0x1a1f25 },
+          { shape: 'box', size: [0.6, 0.3, 0.2], pos: [0.9, -0.5, 0.6], color: 0x2a2e34 },
+        ], body: '前置 USB / 网口在前面板；手柄是独立可换部件，摇杆漂移是通病。', stats: [{ label: '通病', value: '摇杆漂移' }, { label: '接口', value: '前置 USB' }],
+        stepTitle: '拆前面板与接口板', tools: ['塑料撬片', '防静电镊子'],
+      },
+    ],
+  },
+  {
+    match: ['耳机', '音箱', '耳麦', '扬声器', '蓝牙耳机', '音响', 'headphone', 'speaker', 'earbud'],
+    label: '耳机 / 音箱',
+    layers: [
+      {
+        id: 'housing', name: '腔体与外壳', group: '结构', pieces: [
+          { shape: 'box', size: [1.6, 1.9, 1.8], pos: [0, 0.2, 0], color: 0x1c1f24, metalness: 0.3, roughness: 0.5 },
+          { shape: 'cyl', size: [0.5, 0.2, 0.5], pos: [0, -0.6, 0], color: 0x2a2e34, rot: [Math.PI / 2, 0, 0] },
+        ], body: '腔体决定声学容积与共振；密闭式与开放式音色取向完全不同。', stats: [{ label: '类型', value: '密闭 / 开放' }, { label: '作用', value: '声学容积' }],
+        stepTitle: '拆下耳罩与腔体', tools: ['精密螺丝刀', '塑料撬片'],
+      },
+      {
+        id: 'driver', name: '扬声器单元', group: '声学', pieces: [
+          { shape: 'cyl', size: [1.1, 0.5, 1.1], pos: [0, 0.1, 0], color: 0xb9bdc2, metalness: 0.7, roughness: 0.35, rot: [Math.PI / 2, 0, 0] },
+        ], body: '动圈单元由振膜 + 音圈 + 磁路组成，是换能核心。振膜破损会破音。', stats: [{ label: '核心', value: '动圈振膜' }, { label: '故障', value: '破音' }],
+        stepTitle: '取出扬声器单元', tools: ['精密螺丝刀', '防静电镊子'],
+      },
+      {
+        id: 'anc', name: '降噪与麦克风', group: '声学', pieces: [
+          { shape: 'box', size: [0.3, 0.1, 0.3], pos: [0.5, 0.3, 0.6], color: 0x1b2228 },
+          { shape: 'cyl', size: [0.1, 0.1, 0.1], pos: [-0.5, 0.4, 0.6], color: 0x2a2e34, rot: [Math.PI / 2, 0, 0] },
+        ], body: '前馈 + 反馈麦克风采集环境噪声，与扬声器形成主动抵消。', stats: [{ label: '技术', value: '主动降噪 ANC' }, { label: '组成', value: '多麦克风阵列' }],
+        stepTitle: '拆麦克风与降噪板', tools: ['防静电镊子', '精密螺丝刀'],
+      },
+      {
+        id: 'board', name: '主板与蓝牙', group: '电子', pieces: [
+          { shape: 'slab', size: [1.2, 0.04, 0.9], pos: [0, -0.3, 0], color: 0x0f2f26 },
+          { shape: 'box', size: [0.3, 0.05, 0.3], pos: [0.3, -0.27, 0.1], color: 0x1b2228 },
+        ], body: '蓝牙 SoC 与 DAC 集成在主板上，固件决定连接稳定性与音质。', stats: [{ label: '核心', value: '蓝牙 SoC' }, { label: '维修', value: '整板更换' }],
+        stepTitle: '取出主控板', tools: ['防静电镊子', '精密螺丝刀'],
+      },
+      {
+        id: 'battery', name: '电池', group: '能源', pieces: [
+          { shape: 'box', size: [0.7, 0.3, 0.4], pos: [-0.5, -0.5, 0], color: 0xb9bdc2, metalness: 0.7, roughness: 0.35 },
+        ], body: '锂电循环衰减后续航骤降；真无线耳机电池太小，常整只换新。', stats: [{ label: '衰减', value: '快' }, { label: '安全', value: '先断电' }],
+        stepTitle: '取出电池', tools: ['塑料撬棒'],
+      },
+    ],
+  },
+  {
+    match: ['咖啡机', '微波炉', '洗衣机', '冰箱', '家电', '电饭煲', '电磁炉', '烤箱', '空气净化器'],
+    label: '家用电器',
+    layers: [
+      {
+        id: 'shell', name: '外壳与控制面板', group: '结构', pieces: [
+          { shape: 'box', size: [2.6, 2.4, 2.2], pos: [0, 0.2, 0], color: 0x2b3138 },
+          { shape: 'slab', size: [2.0, 0.1, 0.6], pos: [0, 1.0, 1.1], color: 0x1a1f25 },
+        ], body: '外壳是钣金或注塑，控制面板集成按键/屏，拆前先断电拔插。', stats: [{ label: '固定', value: '螺丝 + 卡扣' }, { label: '前提', value: '先断电' }],
+        stepTitle: '拆外壳与面板', tools: ['螺丝刀', '塑料撬片'],
+      },
+      {
+        id: 'core', name: '核心部件', group: '执行', pieces: [
+          { shape: 'cyl', size: [0.9, 1.2, 0.9], pos: [0, -0.3, 0], color: 0x8a8f93, metalness: 0.85, rot: [Math.PI / 2, 0, 0] },
+          { shape: 'box', size: [1.0, 0.5, 1.0], pos: [0, -0.6, 0], color: 0x6e6a66, metalness: 0.5 },
+        ], body: '加热管 / 电机 / 压缩机是家电的执行核心，过载与老化是主因。', stats: [{ label: '核心', value: '加热 / 电机' }, { label: '故障', value: '过载老化' }],
+        stepTitle: '拆核心部件', tools: ['套筒扳手', '螺丝刀'],
+      },
+      {
+        id: 'tank', name: '内胆 / 水路', group: '容器', pieces: [
+          { shape: 'box', size: [2.0, 1.6, 1.6], pos: [0, -0.4, 0], color: 0xb9bdc2, metalness: 0.6, roughness: 0.4 },
+        ], body: '内胆、水箱、管路承担载物与流体；密封失效会漏水/串味。', stats: [{ label: '风险', value: '漏水 / 密封' }, { label: '清洁', value: '除垢' }],
+        stepTitle: '取出内胆与水路', tools: ['螺丝刀', '密封圈工具'],
+      },
+      {
+        id: 'board', name: '控制板与电源', group: '电子', pieces: [
+          { shape: 'slab', size: [1.4, 0.04, 1.0], pos: [0, 0.6, 0], color: 0x0f2f26 },
+          { shape: 'box', size: [0.8, 0.4, 0.6], pos: [-0.8, 0.2, 0], color: 0x9aa0a6, metalness: 0.85 },
+        ], body: '控制板管程序与驱动，电源把市电转直流；电容鼓包是家电常见死因。', stats: [{ label: '核心', value: 'MCU 控制' }, { label: '老化', value: '电源电容' }],
+        stepTitle: '取出控制板与电源', tools: ['防静电镊子', '螺丝刀'],
+      },
+      {
+        id: 'fan', name: '风道与散热', group: '热学', pieces: [
+          { shape: 'cyl', size: [0.8, 0.4, 0.8], pos: [0, -0.1, 0.8], color: 0x8f98a1, metalness: 0.85, rot: [Math.PI / 2, 0, 0] },
+        ], body: '风扇负责散热或风循环；积灰卡转会触发过热保护停机。', stats: [{ label: '维护', value: '清灰' }, { label: '保护', value: '过热停机' }],
+        stepTitle: '清理风扇与风道', tools: ['毛刷', '螺丝刀'],
+      },
+    ],
+  },
+  {
+    match: ['摩托', '电动车', '自行车', '助力车', '电瓶车', '电驴', '摩托车', 'motorcycle', 'ebike', 'scooter'],
+    label: '电动交通',
+    layers: [
+      {
+        id: 'frame', name: '车架与外壳', group: '结构', pieces: [
+          { shape: 'box', size: [3.2, 1.0, 1.0], pos: [0, 0.4, 0], color: 0x2b3138 },
+          { shape: 'blade', size: [1.6, 0.1, 0.1], pos: [0, 0.8, 0], color: 0x7d8388, metalness: 0.9 },
+        ], body: '车架是受力主体，外壳多为覆盖件；碰撞后先查车架是否变形。', stats: [{ label: '受力', value: '车架主体' }, { label: '覆盖', value: '外壳件' }],
+        stepTitle: '拆覆盖件，检查车架', tools: ['套筒扳手', '内六角'],
+      },
+      {
+        id: 'motor', name: '电机 / 轮毂', group: '动力', pieces: [
+          { shape: 'cyl', size: [0.7, 0.5, 0.7], pos: [-1.2, -0.3, 0], color: 0x8a8f93, metalness: 0.9, rot: [Math.PI / 2, 0, 0] },
+          { shape: 'cyl', size: [0.3, 0.3, 0.3], pos: [1.2, -0.3, 0.6], color: 0x767b80, metalness: 0.9, rot: [Math.PI / 2, 0, 0] },
+        ], body: '轮毂电机或中置电机是动力源，进水与过热是两大杀手。', stats: [{ label: '类型', value: '轮毂 / 中置' }, { label: '杀手', value: '进水 / 过热' }],
+        stepTitle: '拆电机', tools: ['拉马', '套筒扳手'],
+      },
+      {
+        id: 'battery', name: '电池组', group: '能源', pieces: [
+          { shape: 'box', size: [1.8, 0.6, 0.7], pos: [0, -0.1, 0], color: 0xb9bdc2, metalness: 0.7, roughness: 0.35 },
+        ], body: '锂电组是高压件，拆前必须断电放电；鼓包、穿刺都极度危险。', stats: [{ label: '安全', value: '高压 / 先放电' }, { label: '寿命', value: '循环衰减' }],
+        stepTitle: '高压下电后取电池', tools: ['绝缘工具', '套筒扳手'],
+      },
+      {
+        id: 'controller', name: '控制器', group: '电子', pieces: [
+          { shape: 'box', size: [0.9, 0.4, 0.6], pos: [0.6, 0.1, 0], color: 0x0f2f26 },
+          { shape: 'box', size: [0.3, 0.05, 0.3], pos: [0.6, 0.32, 0], color: 0x1b2228 },
+        ], body: '控制器管电机驱动与限速，是故障与改装重灾区。', stats: [{ label: '作用', value: '电机驱动' }, { label: '风险', value: '改装 / 烧毁' }],
+        stepTitle: '取出控制器', tools: ['螺丝刀', '防静电镊子'],
+      },
+      {
+        id: 'brake', name: '刹车与轮组', group: '行走', pieces: [
+          { shape: 'cyl', size: [0.4, 0.2, 0.4], pos: [1.2, -0.3, 0], color: 0x0d0f12, rot: [Math.PI / 2, 0, 0] },
+          { shape: 'blade', size: [1.2, 0.08, 0.08], pos: [1.2, -0.3, 0.5], color: 0x7d8388, metalness: 0.9 },
+        ], body: '碟刹/鼓刹与轮组是安全件，刹车皮磨损必须按时换。', stats: [{ label: '安全件', value: '是' }, { label: '维护', value: '换刹车皮' }],
+        stepTitle: '拆轮组与刹车', tools: ['快拆杆', '扭矩扳手'],
       },
     ],
   },
@@ -607,10 +818,34 @@ function autoCamera(layerCount: number): { position: [number, number, number]; t
   return { position: [dir.x, dir.y, dir.z], target: [0, 0, 0] };
 }
 
-/** 把一段（可能是 LLM 产出的）文本收敛成安全的纯文本 */
+/**
+ * 把一段（可能是 LLM 产出的）文本收敛成安全的纯文本。
+ * 纵深防御：LLM 偶尔会在正文里塞控制字符、零宽字符、替换符（U+FFFD）或
+ * 未转义的尖括号，这些在 3D 标签 / 卡片里会渲染成乱码或破坏布局。
+ * 这里统一净化：按 Unicode 码点剔除不可见字符、中和 HTML 尖括号、压缩空白。
+ */
 function text(v: unknown, fallback = ''): string {
   if (typeof v !== 'string') return fallback;
-  const t = v.replace(/\s+/g, ' ').trim();
+  let t = '';
+  for (const ch of v) {
+    const cp = ch.codePointAt(0) ?? 0;
+    // C0 控制字符（< 0x20）与 C1 控制字符（0x7F–0x9F）
+    if (cp < 0x20) continue;
+    if (cp >= 0x7f && cp <= 0x9f) continue;
+    // 零宽/格式字符、软连字符、BOM、替换符
+    if (
+      cp === 0x200b || cp === 0x200c || cp === 0x200d ||
+      cp === 0x2060 || cp === 0xfeff || cp === 0xfffd || cp === 0xad
+    ) continue;
+    t += ch;
+  }
+  t = t
+    .replace(/</g, '＜') // 中和尖括号（防注入 / 防 3D 标签断裂）
+    .replace(/>/g, '＞')
+    .replace(/"/g, '＂')
+    .replace(/'/g, '＇')
+    .replace(/\s+/g, ' ')
+    .trim();
   return t.length > 400 ? `${t.slice(0, 400)}…` : t;
 }
 

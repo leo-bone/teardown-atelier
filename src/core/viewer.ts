@@ -21,6 +21,15 @@ interface BuiltLayer {
   meshes: THREE.Mesh[];
 }
 
+/** 转义后拼进 innerHTML，避免 AI 生成的名称/文案里带 < & 等字符把标签渲染成乱码 */
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export interface ViewerCallbacks {
   onPick?: (layerId: string | null) => void;
   onHover?: (layerId: string | null) => void;
@@ -361,7 +370,7 @@ export class TeardownViewer {
         el.className = 'hotspot-label';
         el.dataset.layerId = def.id;
         el.dataset.hotspot = h.id;
-        el.innerHTML = `<span class="hs-dot"></span><span class="hs-text">${h.title}</span>`;
+        el.innerHTML = `<span class="hs-dot"></span><span class="hs-text">${escHtml(h.title)}</span>`;
         el.addEventListener('click', (ev) => {
           ev.stopPropagation();
           this.focusLayer(def.id);
@@ -899,12 +908,19 @@ export class TeardownViewer {
    * 走 canvas.captureStream() + MediaRecorder，纯前端、无后端、无依赖。
    * 时间线：0–15% 装配态自转 → 15–55% 连续爆炸 → 55–88% 爆炸态自转 → 88–100% 收起。
    * 录制期间强制开启自转，录完恢复用户原设置。
+   *
+   * 画质：录制分辨率与当前画布显示尺寸**解耦**——无论 3D 是右下角小窗还是全屏，
+   * 都临时把渲染缓冲切到 1920×1080（16:9）全高清、码率 20 Mbps，导出清晰视频；
+   * 录完再还原，页面不发生布局跳动。
    */
   async record(durationSec = 24, onProgress?: (p: number) => void): Promise<Blob> {
     const canvas = this.renderer.domElement;
     if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') {
       throw new Error('当前浏览器不支持画布录制');
     }
+
+    const REC_W = 1920;
+    const REC_H = 1080;
 
     const mimeCandidates = [
       'video/webm;codecs=vp9',
@@ -916,12 +932,27 @@ export class TeardownViewer {
     const stream = canvas.captureStream(30);
     const rec = new MediaRecorder(
       stream,
-      mime ? { mimeType: mime, videoBitsPerSecond: 12_000_000 } : undefined
+      mime ? { mimeType: mime, videoBitsPerSecond: 20_000_000 } : undefined
     );
     const chunks: Blob[] = [];
     rec.ondataavailable = (e) => {
       if (e.data && e.data.size) chunks.push(e.data);
     };
+
+    // 保存当前渲染状态，录制时临时切到全高清、结束后还原
+    const prevPR = this.renderer.getPixelRatio();
+    const prevW = this.container.clientWidth;
+    const prevH = this.container.clientHeight;
+    const prevAspect = this.camera.aspect;
+
+    this.renderer.setPixelRatio(1);
+    // updateStyle=false：只改绘制缓冲，不动 CSS 尺寸，避免录制时页面跳动
+    this.renderer.setSize(REC_W, REC_H, false);
+    this.composer.setSize(REC_W, REC_H);
+    if (this.gradePass) this.gradePass.uniforms['uResolution'].value.set(REC_W, REC_H);
+    this.camera.aspect = REC_W / REC_H;
+    this.camera.updateProjectionMatrix();
+    this.clampCameraToModel();
 
     const prevAuto = this.controls.autoRotate;
     const prevWanted = this.autoRotateWanted;
@@ -959,11 +990,21 @@ export class TeardownViewer {
 
     rec.stop();
     await stopped;
+
+    // 还原渲染状态（含 updateStyle=false，CSS 尺寸保持不变）
     this.controls.autoRotate = prevAuto;
     this.autoRotateWanted = prevWanted;
     this.explodeTarget = 0;
     this.explodeT = 0;
     this.applyExplode();
+    this.renderer.setPixelRatio(prevPR);
+    this.renderer.setSize(prevW, prevH, false);
+    this.composer.setSize(prevW, prevH);
+    if (this.gradePass) this.gradePass.uniforms['uResolution'].value.set(prevW, prevH);
+    this.camera.aspect = prevAspect;
+    this.camera.updateProjectionMatrix();
+    this.clampCameraToModel();
+
     return new Blob(chunks, { type: mime || 'video/webm' });
   }
 }

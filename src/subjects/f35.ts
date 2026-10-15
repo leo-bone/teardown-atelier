@@ -26,50 +26,93 @@ import type { Layer, Subject } from '../core/types';
 
 const U = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
-// 机身纵向半剖面（半径 r, 轴向 y：0=机尾 → 15.7=机头）
-const FUSE_PROFILE: [number, number][] = [
-  [0.02, 0.0],
-  [0.42, 0.6],
-  [0.72, 2.2],
-  [0.92, 5.0],
-  [0.9, 8.0],
-  [0.82, 10.5],
-  [0.62, 12.6],
-  [0.4, 14.2],
-  [0.18, 15.4],
-  [0.02, 15.7],
+// 机身放样站位：[x, 半宽 z, 半高 y] —— 机头 +X（x=7.85），机尾 -X（x=-7.85）
+// 宽扁截面 + 中段最宽 + 机头收尖 + 机尾收细，是 F-35"宽扁隐身体"的轮廓骨架。
+const FUSE_STN: [number, number, number][] = [
+  [-7.85, 0.18, 0.26],
+  [-7.0, 0.46, 0.6],
+  [-5.6, 0.74, 0.82],
+  [-3.4, 0.92, 0.92],
+  [-1.0, 0.97, 0.94],
+  [1.2, 0.96, 0.9],
+  [3.2, 0.9, 0.82],
+  [4.8, 0.78, 0.68],
+  [6.0, 0.58, 0.5],
+  [7.0, 0.34, 0.32],
+  [7.85, 0.03, 0.06],
 ];
 
-/** 主机身：旋转成型的卵形截面筒 + 尾部收缩 */
+/** 主机身：沿机头→机尾放样的锥形截面体。
+ *  之前用 LatheGeometry 旋转出来是"回转体"，像导弹筒而不是战机——这是"不像"的主因。
+ *  真实 F-35 机身是放样体：宽扁截面、中段最宽、机头收尖、机尾收细，并沿两侧最宽处
+ *  拉出锐利的隐身棱线（chine）。这里用 FUSE_STN 站位放样重建。 */
 function buildFuselage(): THREE.Group {
   const g = new THREE.Group();
+  const seg = 36;
 
-  const pts = FUSE_PROFILE.map(([r, y]) => new THREE.Vector2(r, y));
+  // ---- 放样机身蒙皮 ----
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const ring = FUSE_STN.length;
+  for (let i = 0; i < ring; i++) {
+    const [x, hw, hh] = FUSE_STN[i];
+    for (let j = 0; j <= seg; j++) {
+      const a = (j / seg) * Math.PI * 2;
+      const sa = Math.sin(a);
+      // 下半（y<0）压扁 ~0.8，做出 F-35 的平底隐身截面
+      const yScale = sa < 0 ? 0.8 : 1.0;
+      positions.push(x, sa * hh * yScale, Math.cos(a) * hw);
+    }
+  }
+  for (let i = 0; i < ring - 1; i++) {
+    for (let j = 0; j < seg; j++) {
+      const a = i * (seg + 1) + j;
+      const b = a + 1;
+      const c = a + (seg + 1);
+      const d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+  const skin = new THREE.BufferGeometry();
+  skin.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  skin.setIndex(indices);
+  skin.computeVertexNormals();
+  // DoubleSide：机尾是开口（露出内埋发动机），避免透视穿帮
   const body = new THREE.Mesh(
-    new THREE.LatheGeometry(pts, 48),
-    metalMaterial(0x9aa0a4, 0.42, 0.85)
+    skin,
+    mat({ color: 0x9aa0a4, metalness: 0.78, roughness: 0.42, side: THREE.DoubleSide })
   );
-  // 旋转体默认绕 Y，转到沿 X（机头朝 +X），并居中
-  body.rotation.z = -Math.PI / 2;
-  body.position.x = -7.85;
-  // 压扁成卵形截面（宽 > 高），F-35 机身偏扁
-  body.scale.set(1, 0.82, 1);
   g.add(body);
 
-  // 隐身棱线（chines）：机身两侧两条锐利折边，是 F-35 最标志性的外形语言
-  const chineMat = metalMaterial(0x8e9498, 0.4, 0.85);
+  // ---- 隐身棱线（chine）：沿机身两侧最宽处的锐利折边，F-35 最标志性的外形语言 ----
+  const chineMat = metalMaterial(0x8e9498, 0.4, 0.82);
   for (const sgn of [1, -1]) {
-    const chine = new THREE.Mesh(new THREE.BoxGeometry(11.5, 0.16, 0.22), chineMat);
-    chine.position.set(-0.6, 0.18, sgn * 0.78);
-    chine.rotation.z = 0.012;
-    chine.rotation.y = sgn * 0.02;
-    g.add(chine);
+    const outer: number[] = [];
+    const inner: number[] = [];
+    for (let i = 0; i < ring; i++) {
+      const [, hw, hh] = FUSE_STN[i];
+      const y = hh * 0.34;
+      const z = sgn * (hw + 0.015);
+      outer.push(FUSE_STN[i][0], y, z);
+      inner.push(FUSE_STN[i][0], y + 0.1, z * 0.9 + sgn * 0.04);
+    }
+    const pos: number[] = [...outer, ...inner];
+    const idx: number[] = [];
+    for (let i = 0; i < ring - 1; i++) {
+      const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+      idx.push(a, c, b, b, c, d);
+    }
+    const cg = new THREE.BufferGeometry();
+    cg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    cg.setIndex(idx);
+    cg.computeVertexNormals();
+    g.add(new THREE.Mesh(cg, chineMat));
   }
 
   // 进气道上唇（DSI 无附面层隔道进气，F-35 招牌）
   for (const sgn of [1, -1]) {
-    const lip = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 1.0), metalMaterial(0x868c90, 0.4, 0.85));
-    lip.position.set(1.6, -0.35, sgn * 0.95);
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.12, 0.95), metalMaterial(0x868c90, 0.4, 0.85));
+    lip.position.set(1.4, -0.42, sgn * 0.92);
     g.add(lip);
   }
 
@@ -90,13 +133,13 @@ function buildFuselage(): THREE.Group {
     g.add(stab);
   }
 
-  // 尾喷口外缘（发动机舱收口）
+  // 尾喷口收口环
   const tailRing = new THREE.Mesh(
-    new THREE.TorusGeometry(0.55, 0.12, 10, 32),
+    new THREE.TorusGeometry(0.34, 0.1, 10, 28),
     metalMaterial(0x6e6a66, 0.5, 1)
   );
   tailRing.rotation.y = Math.PI / 2;
-  tailRing.position.set(-7.6, 0, 0);
+  tailRing.position.set(-7.75, 0, 0);
   g.add(tailRing);
 
   addEdges(g, 0x5b6168, 0.1);
@@ -118,62 +161,53 @@ function buildCanopy(): THREE.Group {
   return g;
 }
 
-/** 航电与传感器：机头 AESA 雷达 + EOTS + DAS + 电子战 */
+/** 航电与传感器：机头 AESA 雷达 + EOTS + DAS + 电子战（贴合新机身站位） */
 function buildAvionics(): THREE.Group {
   const g = new THREE.Group();
 
-  // APG-81 AESA 雷达（机头内部，T/R 模块阵列示意）
-  const radome = new THREE.Mesh(
-    new THREE.ConeGeometry(0.78, 1.6, 28, 1, true),
-    metalMaterial(0xb9bec3, 0.4, 0.7)
-  );
-  radome.rotation.z = -Math.PI / 2;
-  radome.position.set(13.4, 0, 0);
-  g.add(radome);
-
+  // AN/APG-81 AESA 雷达阵列（机头内部，T/R 模块点阵示意）——内埋，仅露一点
   const array = new THREE.Mesh(
-    new THREE.BoxGeometry(0.1, 1.1, 1.1),
+    new THREE.BoxGeometry(0.1, 0.9, 0.9),
     mat({ color: 0x1c2a33, metalness: 0.5, roughness: 0.5, emissive: 0x0a2230, emissiveIntensity: 0.4 })
   );
-  array.position.set(13.0, 0, 0);
+  array.position.set(6.0, 0, 0);
   g.add(array);
-  // T/R 模块点阵
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 6; j++) {
       const cell = new THREE.Mesh(
-        new THREE.BoxGeometry(0.04, 0.14, 0.14),
+        new THREE.BoxGeometry(0.04, 0.12, 0.12),
         mat({ color: 0x1f6f7a, metalness: 0.6, roughness: 0.4 })
       );
-      cell.position.set(12.96, -0.45 + i * 0.18, -0.45 + j * 0.18);
+      cell.position.set(5.96, -0.4 + i * 0.16, -0.4 + j * 0.16);
       g.add(cell);
     }
   }
 
   // EOTS：机头下方宝石形光电窗口（F-35 招牌下颚传感器）
   const eots = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.4, 0.7),
+    new THREE.BoxGeometry(0.5, 0.36, 0.6),
     mat({ color: 0x0c1a22, metalness: 0.3, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05 })
   );
-  eots.position.set(11.8, -0.55, 0);
+  eots.position.set(5.6, -0.45, 0);
   g.add(eots);
 
   // DAS 分布式孔径：6 个红外传感器（机身四周 360°）
   const dasMat = mat({ color: 0x0a1014, metalness: 0.4, roughness: 0.2 });
-  const dasPos: [number, number, number, number][] = [
-    [9, 0.7, 1.0, 0], [9, 0.7, -1.0, 0],
-    [2, 1.0, 0.9, 1], [2, 1.0, -0.9, -1],
-    [-3, -0.7, 1.0, 0], [-3, -0.7, -1.0, 0],
+  const dasPos: [number, number, number][] = [
+    [3.0, 0.55, 0.85], [3.0, 0.55, -0.85],
+    [0.5, 0.85, 0.8], [0.5, 0.85, -0.8],
+    [-3.0, 0.6, 0.82], [-3.0, 0.6, -0.82],
   ];
   dasPos.forEach(([x, y, z]) => {
-    const sensor = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.3, 8), dasMat);
+    const sensor = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.26, 8), dasMat);
     sensor.position.set(x, y, z);
     g.add(sensor);
   });
 
   // AN/ASQ-239 电子战天线（机背两条）
   for (const sgn of [1, -1]) {
-    const ew = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.06, 0.18), mat({ color: 0x2a3540, metalness: 0.6, roughness: 0.4 }));
-    ew.position.set(2, 0.82, sgn * 0.4);
+    const ew = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.06, 0.16), mat({ color: 0x2a3540, metalness: 0.6, roughness: 0.4 }));
+    ew.position.set(2, 0.72, sgn * 0.4);
     g.add(ew);
   }
 
@@ -409,7 +443,7 @@ export function f35LightningII(): Subject {
       {
         id: 'apg81',
         title: 'AN/APG-81 AESA 雷达',
-        anchor: U(13.0, 0, 0),
+        anchor: U(6.0, 0, 0),
         body: `机头内是一面<b>有源相控阵（AESA）</b>雷达，由成百上千个独立的 T/R 收发模块组成（模型中以点阵示意）。
         AESA 可以同时做多件事：一边搜索跟踪，一边对地成像、电子对抗——而且很难被截获和干扰。
         它是 F-35 "传感器融合"的硬件基石：雷达、光电、电子战的数据在机内合成成一张统一的态势图。`,
@@ -422,7 +456,7 @@ export function f35LightningII(): Subject {
       {
         id: 'eots',
         title: 'EOTS 光电瞄准系统',
-        anchor: U(11.8, -0.55, 0),
+        anchor: U(5.6, -0.45, 0),
         body: `机头下方那块宝石形的窗口，是 <b>EOTS（Electro-Optical Targeting System）</b>——一个内置的前视红外/激光瞄准系统。
         它能被动探测、识别、激光指示目标，全程不发射信号，隐身状态不被破坏。
         这是 F-35 能在"不开雷达"的情况下完成瞄准的关键传感器之一。`,
@@ -435,7 +469,7 @@ export function f35LightningII(): Subject {
       {
         id: 'das',
         title: 'DAS 分布式孔径系统',
-        anchor: U(2, 1.0, 0.9),
+        anchor: U(0.5, 0.85, 0.8),
         body: `<b>DAS（Distributed Aperture System）</b>由机身四周的 6 个红外传感器组成，提供<b>全向 360° 红外态势感知</b>。
         导弹逼近告警、夜视、对地跟踪都靠它。配合 HMDS，飞行员获得了"透视机身"的球形视场——这正是 F-35 区别于四代机的核心体验之一。`,
         stats: [
