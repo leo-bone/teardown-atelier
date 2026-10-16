@@ -46,6 +46,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
             <span data-i18n="home.label">选择台</span>
           </button>
+          <button id="btn-gen" class="mini gen-toggle" title="输入任意产品名生成拆解" data-i18n="gen.open" data-i18n-attr="title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span data-i18n="gen.open">任意产品</span>
+          </button>
           <button id="btn-lang" class="mini lang-toggle" title="切换语言 / Language" data-i18n="lang.toggle" data-i18n-attr="title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg>
             <span id="btn-lang-txt">EN</span>
@@ -294,6 +298,27 @@
         </aside>
       </div>
     </div>
+    <!-- 任意产品生成器：常驻入口弹窗 -->
+    <div id="gen-modal" hidden>
+      <div class="gen-card">
+        <button id="gen-close" class="gen-close" aria-label="关闭" data-i18n="hotcard.close" data-i18n-attr="aria-label">×</button>
+        <div class="gen-kicker" data-i18n="hero.genKicker">或者，随便输入一个产品名</div>
+        <h2 class="gen-title" data-i18n="gen.modalTitle">任意产品拆解</h2>
+        <div class="gen-row">
+          <input id="gen-input-modal" type="text" maxlength="40" autocomplete="off"
+                 placeholder="例如：扫地机器人 / 电饭煲 / 自行车 / 打印机"
+                 data-i18n="hero.genPlaceholder" data-i18n-attr="placeholder" />
+          <button id="gen-btn-modal" class="gen-go" data-i18n="hero.genBtn">生成拆解</button>
+        </div>
+        <label class="gen-toggle" id="gen-remote-wrap-modal" hidden>
+          <input type="checkbox" id="gen-remote-modal" />
+          <span data-i18n="hero.genRemote">用 AI 生成真实规格（需配置云端代理）</span>
+        </label>
+        <div class="gen-note" data-i18n="hero.genNote">通用模板重建 · 结构示意图 · 非真实规格（演示用）</div>
+        <div class="gen-examples" id="gen-examples"></div>
+      </div>
+    </div>
+
     <div id="toast"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

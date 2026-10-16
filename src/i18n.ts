@@ -107,6 +107,9 @@ const UI: Dict = {
   ),
   'hero.cardCta': L('查看拆解 →', 'View teardown →'),
   'hero.genKicker': L('或者，随便输入一个产品名', 'Or type in any product'),
+  'gen.open': L('任意产品', 'Any product'),
+  'gen.modalTitle': L('任意产品拆解', 'Teardown any product'),
+  'gen.examples': L('试试这些', 'Try these'),
   'hero.genPlaceholder': L(
     '例如：扫地机器人 / 电饭煲 / 自行车 / 打印机',
     'e.g. robot vacuum / rice cooker / bicycle / printer'
@@ -193,6 +196,7 @@ const UI: Dict = {
 
   // Toast / 动态提示
   'toast.emptyQuery': L('先输入一个产品名', 'Enter a product name first'),
+  'toast.notReady': L('主体还在加载，请稍候', 'Still loading — try again in a moment'),
   'gen.busyLocal': L('生成中…', 'Generating…'),
   'gen.busyRemote': L('AI 生成中…', 'AI generating…'),
   'gen.doneLocal': L('已按通用模板生成「{name}」· {n} 层（示意）', 'Generated "{name}" from the generic template · {n} layers (schematic)'),

@@ -72,7 +72,15 @@ const loading = document.getElementById('loading') as HTMLElement | null;
 const heroShot = document.getElementById('hero-shot') as HTMLImageElement;
 const heroShotCap = document.getElementById('hero-shot-cap') as HTMLElement;
 
-let current: Subject;
+/**
+ * 当前主体。
+ *
+ * 显式声明为可空：loadSubject 是异步的，在它 resolve 之前 current 是 undefined。
+ * 之前写成 `let current: Subject`（非空类型）会让 tsc 放松警惕，
+ * 于是「主体还没加载完就点选择台」会抛 TypeError，页面直接卡死——
+ * 这是用户反馈的"网站有时候会有故障"的真实原因之一。
+ */
+let current: Subject | null = null;
 let activeLayerId: string | null = null;
 
 const viewer = new TeardownViewer(viewport, labels, {
@@ -230,6 +238,7 @@ function setCompareX(pct: number) {
 }
 
 function enterCompare() {
+  if (!current) { toast(t('toast.notReady')); return; }
   if (activeLayerId) { hideCard(); }
   // 生成主体没有装配态实拍，左图会 404。对这类主体直接说明原因，不给一个半坏的滑块
   const before = assembledHero(current.id);
@@ -289,26 +298,46 @@ document.getElementById('hero-enter')!.addEventListener('click', () => {
   void loadSubject(SUBJECT_META[0].id);
   hideHero();
 });
-document.getElementById('btn-home')!.addEventListener('click', () => {
-  // 回选择台时把对比滑块收掉：它z-index 高于 hero，留在那里会盖住落地页
+/**
+ * 回到选择台。
+ *
+ * 必须把所有盖在 hero 之上的层一起关掉，否则点了「没反应」：
+ *   #subject-intro  z-index 24
+ *   #gen-modal      z-index 70
+ *   #hotcard/对比滑块在 #stage 内，hero 显示时会被盖住但仍占位
+ * 只 showHero() 而不关这些，是之前「回不到主页」的真实原因。
+ */
+function goHome() {
+  hideSubjectIntro();
+  closeGenModal();
   if (compareMode) exitCompare();
+  if (stepMode) exitStepMode();
+  hideCard();
   showHero();
-});
+}
+document.getElementById('btn-home')!.addEventListener('click', goHome);
 
 // ---------- 任意产品输入（MVP：本地模板 / 云端 AI 双路） ----------
 const genBtn = document.getElementById('gen-btn') as HTMLButtonElement;
 
-async function runGenerate(raw: string) {
+async function runGenerate(
+  raw: string,
+  remoteOverride?: boolean,
+  btnOverride?: HTMLButtonElement
+) {
   const q = raw.trim();
   if (!q) {
     toast(t('toast.emptyQuery'));
     return;
   }
+  const btn = btnOverride ?? genBtn;
   const wantRemote =
-    (document.getElementById('gen-remote') as HTMLInputElement).checked && !!remoteApiBase();
+    (remoteOverride ??
+      (document.getElementById('gen-remote') as HTMLInputElement).checked) &&
+    !!remoteApiBase();
 
-  genBtn.disabled = true;
-  genBtn.textContent = wantRemote ? t('gen.busyRemote') : t('gen.busyLocal');
+  btn.disabled = true;
+  btn.textContent = wantRemote ? t('gen.busyRemote') : t('gen.busyLocal');
   try {
     const provider = pickProvider(wantRemote);
     const s = await provider.generate(q);
@@ -320,6 +349,7 @@ async function runGenerate(raw: string) {
       /* 隐私模式下忽略 */
     }
     skipIntro = false;
+    closeGenModal();
     hideHero();
     void loadSubject(s.id);
     toast(
@@ -333,12 +363,13 @@ async function runGenerate(raw: string) {
     if (!findSubject(s.id)) dynamicSubjects.push(s);
     addTab(s);
     skipIntro = false;
+    closeGenModal();
     hideHero();
     void loadSubject(s.id);
     toast(t('gen.fallback', { msg: (e as Error).message }));
   } finally {
-    genBtn.disabled = false;
-    genBtn.textContent = t('hero.genBtn');
+    btn.disabled = false;
+    btn.textContent = t('hero.genBtn');
   }
 }
 genBtn.addEventListener('click', () => {
@@ -368,6 +399,80 @@ genBtn.addEventListener('click', () => {
 document.getElementById('gen-input')!.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter') void runGenerate((ev.target as HTMLInputElement).value);
 });
+
+// ---------- 任意产品：常驻弹窗入口 ----------
+// 生成器原本只存在于落地页 #hero 里，而进入主体后 #hero 是 hidden 的，
+// 于是「拓展拆解」没有任何常驻入口 —— 必须先回落地页才用得上。
+// 这里给顶栏加一个独立弹窗，不依赖 #hero 的显隐。
+const genModal = document.getElementById('gen-modal') as HTMLElement;
+const genInputModal = document.getElementById('gen-input-modal') as HTMLInputElement;
+const genBtnModal = document.getElementById('gen-btn-modal') as HTMLButtonElement;
+const genRemoteModal = document.getElementById('gen-remote-modal') as HTMLInputElement;
+const genRemoteWrapModal = document.getElementById('gen-remote-wrap-modal') as HTMLElement;
+
+function openGenModal() {
+  genModal.removeAttribute('hidden');
+  // 同步落地页那个勾选框的当前状态，避免两个入口设置不一致
+  genRemoteModal.checked = (document.getElementById('gen-remote') as HTMLInputElement).checked;
+  genInputModal.focus();
+}
+function closeGenModal() {
+  genModal.setAttribute('hidden', '');
+}
+document.getElementById('btn-gen')!.addEventListener('click', openGenModal);
+document.getElementById('gen-close')!.addEventListener('click', closeGenModal);
+genModal.addEventListener('click', (ev) => {
+  if (ev.target === genModal) closeGenModal();
+});
+genBtnModal.addEventListener('click', () => {
+  const q = genInputModal.value.trim();
+  if (!q) { toast(t('toast.emptyQuery')); return; }
+  closeGenModal();
+  void runGenerate(q, genRemoteModal.checked, genBtnModal);
+});
+genInputModal.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Enter') return;
+  const q = genInputModal.value.trim();
+  if (!q) { toast(t('toast.emptyQuery')); return; }
+  closeGenModal();
+  void runGenerate(q, genRemoteModal.checked, genBtnModal);
+});
+
+// 示例词：让入口"看得见能用"，而不是一个空输入框
+const GEN_EXAMPLES_ZH = ['扫地机器人', '电动牙刷', '咖啡机', '打印机', '路由器', '电动工具'];
+const GEN_EXAMPLES_EN = ['Robot vacuum', 'Electric toothbrush', 'Coffee maker', 'Printer', 'Router', 'Power tool'];
+function renderGenExamples() {
+  const box = document.getElementById('gen-examples');
+  if (!box) return;
+  const list = getLang() === 'en' ? GEN_EXAMPLES_EN : GEN_EXAMPLES_ZH;
+  box.innerHTML =
+    `<span class="lbl">${esc(t('gen.examples'))}</span>` +
+    list.map((x) => `<button class="gen-chip" type="button" data-q="${esc(x)}">${esc(x)}</button>`).join('');
+  box.querySelectorAll<HTMLButtonElement>('.gen-chip').forEach((b) => {
+    b.addEventListener('click', () => {
+      genInputModal.value = b.dataset.q ?? '';
+      genInputModal.focus();
+    });
+  });
+}
+renderGenExamples();
+
+// 弹窗里的 AI 开关：与落地页同一个可用性判断
+{
+  const base = remoteApiBase();
+  if (base) {
+    genRemoteWrapModal.removeAttribute('hidden');
+    fetch(`${base}/health`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { llmConfigured?: boolean } | null) => {
+        const label = genRemoteWrapModal.querySelector('span');
+        if (j && j.llmConfigured === false && label) label.textContent = t('hero.genRemoteDown');
+      })
+      .catch(() => {
+        /* 探不通：开关仍开放，真正生成时再报错 */
+      });
+  }
+}
 
 // ---------- 主体入场：产品页式 Hero 时刻 ----------
 const introEl = document.getElementById('subject-intro') as HTMLElement;
@@ -436,7 +541,9 @@ function updateShareMeta(s: Subject) {
   if (wb) wb.href = `https://service.weibo.com/share/share.php?title=${text}&url=${encodeURIComponent(url)}`;
 }
 document.getElementById('btn-share')!.addEventListener('click', async () => {
-  const url = shareUrlFor(current.id);
+  const subject = current;
+  if (!subject) { toast(t('toast.notReady')); return; }
+  const url = shareUrlFor(subject.id);
   try {
     if (navigator.share) {
       await navigator.share({ title: document.title, url });
@@ -664,6 +771,7 @@ setTimeout(hideLoading, 1500);
 
 // ---------- 层选择 + 信息卡 ----------
 function selectLayer(layerId: string, focus: boolean) {
+  if (!current) return;
   const layer = current.layers.find((l) => l.id === layerId);
   if (!layer) return;
   activeLayerId = layerId;
@@ -717,8 +825,8 @@ function hideCard() {
   document.getElementById('hotcard')!.setAttribute('hidden', '');
   activeLayerId = null;
   viewer.setLabelFocus(null);
-  // 取消选中：中央大图回到整体爆炸图
-  setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
+  // 主体尚未加载完成时（首屏后台预载期间）没有可回退的大图，直接收起即可
+  if (current) setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
   document.querySelectorAll('.layer-item.active, .hotspot-label.active').forEach((e) =>
     e.classList.remove('active')
   );
@@ -756,6 +864,7 @@ function exitStepMode() {
   stepMode = false;
   document.getElementById('step-rail')!.setAttribute('hidden', '');
   document.getElementById('btn-steps')!.classList.remove('on');
+  if (!current) return;
   // 恢复全显 + 默认机位
   current.layers.forEach((l) => {
     if (viewer.isHidden(l.id)) viewer.toggleLayer(l.id);
@@ -767,7 +876,8 @@ function exitStepMode() {
 }
 
 function renderStep(i: number) {
-  if (!steps.length) return;
+  const subject = current;
+  if (!steps.length || !subject) return;
   stepIndex = Math.max(0, Math.min(steps.length - 1, i));
   const st = steps[stepIndex];
 
@@ -816,12 +926,12 @@ function renderStep(i: number) {
     stepIndex === steps.length - 1;
 
   // 3D 小窗：只保留这一步涉及的层；单层时直接隔离
-  const inStep = st.layers.filter((id) => current.layers.some((l) => l.id === id));
+  const inStep = st.layers.filter((id) => subject.layers.some((l) => l.id === id));
   if (inStep.length === 1) {
     viewer.isolate(inStep[0]);
   } else {
     viewer.isolate(null);
-    current.layers.forEach((l) => {
+    subject.layers.forEach((l) => {
       const want = inStep.includes(l.id);
       if (viewer.isHidden(l.id) !== !want) viewer.toggleLayer(l.id);
     });
@@ -838,12 +948,12 @@ function renderStep(i: number) {
 
   // 中央大图：取这一步第一个有参考图的层
   const withRef = inStep
-    .map((id) => current.layers.find((l) => l.id === id))
+    .map((id) => subject.layers.find((l) => l.id === id))
     .find((l) => l?.refImage);
   if (withRef) {
     setHero(withRef.refImage!, heroCap(withRef.name, 'hero.capStep', { n: stepIndex + 1 }));
   } else {
-    setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
+    setHero(subjectHero(subject), heroCap(subject.name, 'hero.capExploded'));
   }
 }
 
@@ -887,6 +997,8 @@ function recFmt(sec: number): string {
   return `00:${String(s).padStart(2, '0')}`;
 }
 document.getElementById('btn-record')!.addEventListener('click', async () => {
+  const subject = current;
+  if (!subject) { toast(t('toast.notReady')); return; }
   const btn = document.getElementById('btn-record') as HTMLButtonElement;
   const overlay = document.getElementById('rec-overlay') as HTMLElement;
   const bar = document.getElementById('rec-bar') as HTMLElement;
@@ -909,7 +1021,7 @@ document.getElementById('btn-record')!.addEventListener('click', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${current.id}-teardown.webm`;
+    a.download = `${subject.id}-teardown.webm`;
     a.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 5000);
     toast(t('rec.done', { size: (blob.size / 1024 / 1024).toFixed(1) }));
@@ -926,6 +1038,8 @@ document.getElementById('btn-record')!.addEventListener('click', async () => {
 });
 
 document.getElementById('btn-shot')!.addEventListener('click', () => {
+  const subject = current;
+  if (!subject) { toast(t('toast.notReady')); return; }
   const btn = document.getElementById('btn-shot') as HTMLElement;
   const shotLabel = btn.querySelector('[data-i18n="tool.shot"]') as HTMLElement | null;
   if (shotLabel) shotLabel.textContent = t('tool.shotBusy');
@@ -937,7 +1051,7 @@ document.getElementById('btn-shot')!.addEventListener('click', () => {
         const url = viewer.screenshot(2);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${current.id}-teardown.png`;
+        a.download = `${subject.id}-teardown.png`;
         a.click();
       } catch (e) {
         console.error('导出失败', e);
@@ -969,6 +1083,7 @@ document.getElementById('btn-labels')!.addEventListener('click', (ev) => {
 
 document.getElementById('btn-reset')!.addEventListener('click', () => viewer.resetView());
 document.getElementById('btn-show-all')!.addEventListener('click', () => {
+  if (!current) return;
   current.layers.forEach((l) => {
     if (viewer.isHidden(l.id)) viewer.toggleLayer(l.id);
   });
@@ -988,9 +1103,11 @@ document.getElementById('pw-toggle')!.addEventListener('click', () => {
 addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement) return;
   if (ev.key === 'Escape') {
-    if (!introEl.hasAttribute('hidden')) hideSubjectIntro();
+    // 顺序按"最上层优先"：弹窗盖在入场页之上，所以先关它
+    if (!genModal.hasAttribute('hidden')) closeGenModal();
+    else if (!introEl.hasAttribute('hidden')) hideSubjectIntro();
     else if (stepMode) exitStepMode();
-    else hideCard();
+    else if (activeLayerId) hideCard();
   }
   if (ev.key === 'r' || ev.key === 'R') viewer.resetView();
   // 分步模式下用左右方向键翻步
@@ -1034,6 +1151,7 @@ langBtn.addEventListener('click', () => {
 
 // 语言一变，当前主体的所有文字都要重渲染（3D 模型本身不用重建）
 onLangChange(() => {
+  renderGenExamples();
   refreshMetaLabels();
   if (current) {
     renderInfo(current);
