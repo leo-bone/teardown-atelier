@@ -232,7 +232,11 @@ document.getElementById('btn-compare')!.addEventListener('click', () => {
   el.addEventListener('pointercancel', stop);
 }
 
-document.getElementById('hero-enter')!.addEventListener('click', () => hideHero());
+document.getElementById('hero-enter')!.addEventListener('click', () => {
+  skipIntro = true;
+  void loadSubject(SUBJECT_META[0].id);
+  hideHero();
+});
 document.getElementById('btn-home')!.addEventListener('click', () => showHero());
 
 // ---------- 任意产品输入（MVP：本地模板 / 云端 AI 双路） ----------
@@ -944,7 +948,15 @@ const initialId =
 if (restoredQuery && initialId.startsWith('gen-')) {
   dynamicSubjects.push(generateSubject(restoredQuery));
 }
-void loadSubject(initialId);
+// 落地页：有 ?subject 深链（含 gen 重建）才直接进产品；否则先展示选择台，
+// 后台预载首个主体，方便「直接进入工坊」秒开。
+if (wanted || initialId.startsWith('gen-')) {
+  void loadSubject(initialId);
+} else {
+  showHero();
+  skipIntro = true;
+  void loadSubject(SUBJECT_META[0].id);
+}
 
 const exRaw = params.get('explode');
 if (exRaw !== null && Number.isFinite(Number(exRaw))) {
