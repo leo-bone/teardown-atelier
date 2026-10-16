@@ -1,6 +1,7 @@
 import { generateSubject, subjectFromSpec } from './generator';
 import type { TeardownSpec } from './generator';
 import type { Subject } from '../core/types';
+import { getLang } from '../i18n';
 
 /**
  * 拆解数据提供方。
@@ -51,7 +52,7 @@ export const remoteProvider: TeardownProvider = {
       const res = await fetch(`${base}/api/teardown`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.slice(0, 60) }),
+        body: JSON.stringify({ query: query.slice(0, 60), lang: getLang() }),
         signal: ctrl.signal,
       });
       if (!res.ok) {

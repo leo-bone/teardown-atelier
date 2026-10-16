@@ -1,4 +1,7 @@
 import type { Subject } from '../core/types';
+import { getLang } from '../i18n';
+import { applyEn, applyMetaEn } from './en/apply';
+import type { SubjectEn, SubjectMetaEn } from './en/types';
 
 /**
  * 主体元数据：顶栏 tabs 与落地卡片只需要这些字段，
@@ -83,17 +86,66 @@ const LOADERS: Record<string, () => Promise<Subject>> = {
   a7v: () => import('./a7v').then((m) => m.sonyA7V()),
 };
 
-/** 已加载过的主体缓存，来回切换不重复解析 */
+/**
+ * 英文覆盖层。**不进动态 import** —— 覆盖层是纯文案，没有 three.js 依赖，
+ * 静态引入 8 个小文件（约 150KB 源码，压缩后更小）换来的是切换语言零延迟：
+ * 不用等chunk、不用重建 3D 场景，只重渲染文字。
+ * 真要省首屏体积，把这里也改成动态 import 即可，接口不用动。
+ */
+const EN_LOADERS: Record<string, () => Promise<{ en: SubjectEn; meta: SubjectMetaEn }>> = {
+  iphone18: () =>
+    import('./en/iphone18').then((m) => ({ en: m.iPhone18ProEn, meta: m.iPhone18ProMetaEn })),
+  rubin: () => import('./en/rubin').then((m) => ({ en: m.rubinVR200En, meta: m.rubinVR200MetaEn })),
+  starship: () =>
+    import('./en/starship').then((m) => ({ en: m.starshipV3En, meta: m.starshipV3MetaEn })),
+  mavic4: () => import('./en/mavic4').then((m) => ({ en: m.mavic4ProEn, meta: m.mavic4ProMetaEn })),
+  f35: () => import('./en/f35').then((m) => ({ en: m.f35LightningIIEn, meta: m.f35LightningIIMetaEn })),
+  porsche911: () =>
+    import('./en/porsche911').then((m) => ({ en: m.porsche911En, meta: m.porsche911MetaEn })),
+  ps5: () => import('./en/ps5').then((m) => ({ en: m.ps5ProEn, meta: m.ps5ProMetaEn })),
+  a7v: () => import('./en/a7v').then((m) => ({ en: m.sonyA7VEn, meta: m.sonyA7VMetaEn })),
+};
+
+/** 英文覆盖层缓存（切换语言时直接命中，不重复 import） */
+const enCache = new Map<string, { en: SubjectEn; meta: SubjectMetaEn }>();
+
+export async function loadSubjectEn(id: string) {
+  const hit = enCache.get(id);
+  if (hit) return hit;
+  const loader = EN_LOADERS[id];
+  if (!loader) return undefined;
+  const v = await loader();
+  enCache.set(id, v);
+  return v;
+}
+
+/** 已加载过的主体缓存。注意：缓存的是**中文原始主体**，语言在渲染前叠加 */
 const cache = new Map<string, Subject>();
 
 export async function loadSubjectDef(id: string): Promise<Subject | undefined> {
   const hit = cache.get(id);
-  if (hit) return hit;
   const loader = LOADERS[id];
   if (!loader) return undefined;
-  const s = await loader();
-  cache.set(id, s);
+  const s = hit ?? (await loader());
+  if (!hit) cache.set(id, s);
+  if (getLang() === 'en') {
+    const en = await loadSubjectEn(id);
+    if (en) return applyEn(s, en.en);
+  }
   return s;
+}
+
+/** 顶栏 tabs / 落地卡片用的元数据，按当前语言取（英文缺失时回退中文） */
+export function metaFor(id: string): SubjectMeta {
+  const base = SUBJECT_META.find((m) => m.id === id);
+  return base ?? { id, name: id, subtitle: '', tagline: '' };
+}
+
+/** 同步版：若英文覆盖层已缓存则立即套用（供切换语言后的即时重渲染） */
+export function localizeMetaSync(m: SubjectMeta): SubjectMeta {
+  if (getLang() !== 'en') return m;
+  const cached = enCache.get(m.id);
+  return cached ? applyMetaEn(m, cached.meta) : m;
 }
 
 export function hasBuiltinSubject(id: string): boolean {

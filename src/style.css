@@ -857,6 +857,31 @@ body {
 /* ---------- 分享 ---------- */
 .share-group { display: flex; align-items: center; gap: 6px; }
 .mini.icon { min-width: 30px; padding: 7px 9px; justify-content: center; font-weight: 700; }
+
+/* ---------- 语言切换 ---------- */
+/* 按钮标签显示"切过去会是什么语言"（EN / 中），字重和宽度都要稳，
+   否则切换瞬间按钮宽度会跳，把顶栏其他元素挤动一下 */
+.lang-toggle {
+  font-weight: 700; letter-spacing: .04em;
+  min-width: 52px; justify-content: center;
+}
+.lang-toggle svg { opacity: .75; }
+
+/* 英文界面：西文字体优先，中文字体退到后面做兜底。
+   不写这条的话，英文段落会沿用中文字体的字距与行高，读起来松散。 */
+html[lang='en'] body,
+html[lang='en'] .panel,
+html[lang='en'] .tab,
+html[lang='en'] .hero-card {
+  letter-spacing: .002em;
+}
+/* 英文长单词（parametric、remanufactured…）在窄栏里可能溢出，给个断词兜底 */
+html[lang='en'] .prose,
+html[lang='en'] #s-overview,
+html[lang='en'] #s-narrative,
+html[lang='en'] .hc-desc {
+  overflow-wrap: break-word;
+}
 #toast {
   position: fixed; left: 50%; bottom: 38px; transform: translateX(-50%) translateY(20px);
   background: rgba(20, 24, 30, 0.96); color: var(--text); font-size: 13px; font-weight: 600;

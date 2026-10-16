@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Layer, Subject, TeardownStep, Hotspot } from '../core/types';
+import { getLang } from '../i18n';
+import { BLUEPRINT_EN } from './en/blueprints';
 
 /**
  * 任意产品输入 → 拆解页（MVP 生成器）
@@ -865,7 +867,8 @@ function strList(v: unknown, max = 6): string[] {
 
 /** 规格 → 可渲染 Subject。size/pos 全部做了范围收敛，防止 LLM 给出离谱数值把场景撑爆 */
 export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
-  const query = text(rawQuery, '未命名产品') || '未命名产品';
+  const isEn = getLang() === 'en';
+  const query = text(rawQuery, isEn ? 'Unnamed product' : '未命名产品') || (isEn ? 'Unnamed product' : '未命名产品');
   const id = slugify(query);
   const name = text(spec.name, query).slice(0, 28) || query.slice(0, 28);
   const isAI = spec.source === 'ai';
@@ -894,12 +897,12 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
         }))
       : [];
     const pieces = [main, ...extras];
-    const body = text(l.body, `${text(l.name, '该层')}：通用结构层。`);
+    const body = text(l.body, isEn ? `${text(l.name, 'This layer')}: generic structural layer.` : `${text(l.name, '该层')}：通用结构层。`);
 
     const hotspots: Hotspot[] = [
       {
         id: `${lid}-main`,
-        title: text(l.name, '结构层'),
+        title: text(l.name, isEn ? 'Structural layer' : '结构层'),
         body,
         anchor: new THREE.Vector3(pos[0], pos[1] + safeSize[1] / 2 + 0.12, pos[2]),
         stats: statList(l.stats),
@@ -908,8 +911,8 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
 
     return {
       id: lid,
-      name: text(l.name, `结构层 ${i + 1}`),
-      group: text(l.group, '结构'),
+      name: text(l.name, isEn ? `Structural layer ${i + 1}` : `结构层 ${i + 1}`),
+      group: text(l.group, isEn ? 'Structure' : '结构'),
       explodeDir: new THREE.Vector3(
         (i - (n - 1) / 2) * 0.34,
         1.25 + i * 0.28,
@@ -919,8 +922,8 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
       sectionable: true,
       build: () => buildGroup(pieces),
       hotspots,
-      refImage: explodedSvg(name, `${text(l.group, '结构')} · 结构示意`, [
-        { name: text(l.name, `结构层 ${i + 1}`), group: text(l.group, '结构'), color },
+      refImage: explodedSvg(name, `${text(l.group, isEn ? 'Structure' : '结构')} · ${isEn ? 'schematic' : '结构示意'}`, [
+        { name: text(l.name, isEn ? `Structural layer ${i + 1}` : `结构层 ${i + 1}`), group: text(l.group, isEn ? 'Structure' : '结构'), color },
       ]),
     };
   });
@@ -929,8 +932,8 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
     Array.isArray(spec.steps) && spec.steps.length
       ? spec.steps.slice(0, 12)
       : spec.layers.map((l, i) => ({
-          title: text(l.stepTitle, `拆下 ${text(l.name, `第 ${i + 1} 层`)}`),
-          body: text(l.body, '按通用拆解流程处理这一层。'),
+          title: text(l.stepTitle, isEn ? `Remove ${text(l.name, `layer ${i + 1}`)}` : `拆下 ${text(l.name, `第 ${i + 1} 层`)}`),
+          body: text(l.body, isEn ? 'Work on this layer using the generic teardown procedure.' : '按通用拆解流程处理这一层。'),
           layers: [l.id],
           tools: strList(l.tools),
           stats: statList(l.stats),
@@ -938,8 +941,8 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
 
   const steps: TeardownStep[] = stepSpecs.map((st, i) => ({
     id: `gen-s${i + 1}`,
-    title: text(st.title, `步骤 ${i + 1}`),
-    body: text(st.body, '按通用拆解流程处理。'),
+    title: text(st.title, isEn ? `Step ${i + 1}` : `步骤 ${i + 1}`),
+    body: text(st.body, isEn ? 'Work through the generic teardown procedure.' : '按通用拆解流程处理。'),
     layers: strList(st.layers, 6).filter((x) => layers.some((l) => l.id === x)),
     tools: strList(st.tools),
     stats: statList(st.stats),
@@ -947,7 +950,7 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
 
   const heroImage = explodedSvg(
     name,
-    `${text(spec.category, '设备')} · ${n} 个结构层 · ${isAI ? 'AI 生成' : '通用模板重建'}`,
+    `${text(spec.category, isEn ? 'Device' : '设备')} · ${n} ${isEn ? 'structural layers' : '个结构层'} · ${isAI ? (isEn ? 'AI generated' : 'AI 生成') : isEn ? 'generic template rebuild' : '通用模板重建'}`,
     layers.map((l) => ({ name: l.name, group: l.group, color: 0x4b5563 }))
   );
   const modeledParts = layers.reduce(
@@ -956,27 +959,46 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
   );
 
   const trustRow = isAI
-    ? { label: '规格可信度', value: '中', note: 'AI 生成，未经权威拆解资料核对' }
-    : { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' };
+    ? isEn
+      ? { label: 'Spec confidence', value: 'Medium', note: 'AI generated, not verified against authoritative teardowns' }
+      : { label: '规格可信度', value: '中', note: 'AI 生成，未经权威拆解资料核对' }
+    : isEn
+      ? { label: 'Spec confidence', value: 'Low', note: 'For demonstrating the presentation only' }
+      : { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' };
 
   return {
     id,
     name,
-    subtitle: text(spec.subtitle, `${text(spec.category, '设备')} · ${isAI ? 'AI 生成' : '通用模板重建'}`),
-    tagline: text(spec.tagline, `${n} 个结构层的拆解呈现，用于演示交互与信息组织方式`),
+    subtitle: text(
+      spec.subtitle,
+      `${text(spec.category, isEn ? 'Device' : '设备')} · ${isAI ? (isEn ? 'AI generated' : 'AI 生成') : isEn ? 'generic template rebuild' : '通用模板重建'}`
+    ),
+    tagline: text(
+      spec.tagline,
+      isEn
+        ? `A ${n}-layer teardown presentation demonstrating the interaction and information structure`
+        : `${n} 个结构层的拆解呈现，用于演示交互与信息组织方式`
+    ),
     headline:
       Array.isArray(spec.headline) && spec.headline.length
         ? spec.headline.slice(0, 4).map((h) => ({
-            label: text(h.label, '指标'),
+            label: text(h.label, isEn ? 'Metric' : '指标'),
             value: text(h.value, '—'),
             unit: h.unit ? text(h.unit) : undefined,
           }))
-        : [
-            { label: '结构层', value: String(n), unit: '层' },
-            { label: '拆解步骤', value: String(steps.length), unit: '步' },
-            { label: '形态', value: isAI ? 'AI 生成' : '示意' },
-            { label: '规格可信度', value: isAI ? '中' : '低' },
-          ],
+        : isEn
+          ? [
+              { label: 'Structural layers', value: String(n), unit: 'layers' },
+              { label: 'Teardown steps', value: String(steps.length), unit: 'steps' },
+              { label: 'Form', value: isAI ? 'AI generated' : 'Schematic' },
+              { label: 'Spec confidence', value: isAI ? 'Medium' : 'Low' },
+            ]
+          : [
+              { label: '结构层', value: String(n), unit: '层' },
+              { label: '拆解步骤', value: String(steps.length), unit: '步' },
+              { label: '形态', value: isAI ? 'AI 生成' : '示意' },
+              { label: '规格可信度', value: isAI ? '中' : '低' },
+            ],
     background: 0x0c0e11,
     accent: /^#[0-9a-fA-F]{6}$/.test(spec.accent ?? '') ? spec.accent! : '#5b8cff',
     camera: autoCamera(spec.layers.length),
@@ -988,51 +1010,95 @@ export function subjectFromSpec(rawQuery: string, spec: TeardownSpec): Subject {
     overview: text(
       spec.overview,
       isAI
-        ? `这是针对「${name}」由 AI 生成的结构拆解。层划分与参数来自模型归纳，未经权威拆解资料核对，仅供演示与参考。`
-        : `这是针对「${name}」按通用模板自动生成的结构示意，不是该产品的真实规格。`
+        ? isEn
+          ? `This is an AI-generated structural teardown for “${name}”. The layer breakdown and parameters come from model inference, are not verified against authoritative teardown sources, and are for reference only.`
+          : `这是针对「${name}」由 AI 生成的结构拆解。层划分与参数来自模型归纳，未经权威拆解资料核对，仅供演示与参考。`
+        : isEn
+          ? `This is a structural schematic auto-generated for “${name}” from the generic template; it is not the product's real specification.`
+          : `这是针对「${name}」按通用模板自动生成的结构示意，不是该产品的真实规格。`
     ),
     narrative:
       Array.isArray(spec.narrative) && spec.narrative.length
         ? spec.narrative.map((p) => text(p)).filter(Boolean).slice(0, 5)
         : isAI
-          ? [
-              '**数据来源**：AI 依据该类产品的常见结构归纳，未经权威拆解资料核对。',
-              '**能用的部分**：层划分、爆炸方向、分步流程、参数卡与真实主体完全一致。',
-              '**注意**：具体螺丝数量、胶合方式、排线位置请以官方维修手册为准。',
-            ]
-          : [
-              '**为什么是"示意"**：任意产品的真实拆解需要权威拆解资料支撑，通用模板只能给出这一类产品的常见结构。',
-              '**能用的部分**：拆解呈现方式（层划分、爆炸方向、分步流程、参数卡）与真实主体完全一致。',
-              '**要做成真实规格**：接入 LLM 后端代理即可（见 worker/README.md）。',
-            ],
+          ? isEn
+            ? [
+                '**Data source**: inferred by AI from the common structure of this product class, not verified against authoritative teardown sources.',
+                '**What is solid**: the layer breakdown, explode directions, step flow and parameter cards behave exactly as they do for the curated subjects.',
+                '**Caveat**: screw counts, bonding methods and flex positions must be checked against the official service manual.',
+              ]
+            : [
+                '**数据来源**：AI 依据该类产品的常见结构归纳，未经权威拆解资料核对。',
+                '**能用的部分**：层划分、爆炸方向、分步流程、参数卡与真实主体完全一致。',
+                '**注意**：具体螺丝数量、胶合方式、排线位置请以官方维修手册为准。',
+              ]
+          : isEn
+            ? [
+                '**Why this is a schematic**: a real teardown of an arbitrary product needs authoritative sources; the generic template can only give the common structure of that product class.',
+                '**What is solid**: the teardown presentation itself — layer breakdown, explode directions, step flow, parameter cards — is identical to the curated subjects.',
+                '**To get real specs**: connect the LLM backend proxy (see worker/README.md).',
+              ]
+            : [
+                '**为什么是"示意"**：任意产品的真实拆解需要权威拆解资料支撑，通用模板只能给出这一类产品的常见结构。',
+                '**能用的部分**：拆解呈现方式（层划分、爆炸方向、分步流程、参数卡）与真实主体完全一致。',
+                '**要做成真实规格**：接入 LLM 后端代理即可（见 worker/README.md）。',
+              ],
     specs:
       Array.isArray(spec.specs) && spec.specs.length
         ? spec.specs
             .slice(0, 10)
-            .map((r) => ({ label: text(r.label, '项'), value: text(r.value, '—'), note: r.note ? text(r.note) : undefined }))
-        : [
-            { label: '产品', value: name },
-            { label: '类别', value: text(spec.category, '设备') },
-            { label: '结构层', value: `${n} 层` },
-          ],
+            .map((r) => ({ label: text(r.label, isEn ? 'Item' : '项'), value: text(r.value, '—'), note: r.note ? text(r.note) : undefined }))
+        : isEn
+          ? [
+              { label: 'Product', value: name },
+              { label: 'Category', value: text(spec.category, 'Device') },
+              { label: 'Structural layers', value: `${n}` },
+            ]
+          : [
+              { label: '产品', value: name },
+              { label: '类别', value: text(spec.category, '设备') },
+              { label: '结构层', value: `${n} 层` },
+            ],
     ...(spec.repairability && Number.isFinite(spec.repairability.score)
       ? {
           repairability: {
             score: Math.max(0, Math.min(10, Math.round(spec.repairability.score))),
-            difficulty: text(spec.repairability.difficulty, '未知'),
+            difficulty: text(spec.repairability.difficulty, isEn ? 'Unknown' : '未知'),
             tools: strList(spec.repairability.tools, 8),
-            note: text(spec.repairability.note, isAI ? 'AI 估计值，仅供参考' : '通用模板估计值'),
+            note: text(
+              spec.repairability.note,
+              isAI
+                ? isEn
+                  ? 'AI estimate, for reference only'
+                  : 'AI 估计值，仅供参考'
+                : isEn
+                  ? 'Generic template estimate'
+                  : '通用模板估计值'
+            ),
           },
         }
       : {}),
     fidelity: {
       actualParts: 0,
-      source: text(spec.sourceNote, isAI ? 'AI 生成，无权威拆解资料' : '无（通用模板，无权威拆解资料）'),
+      source: text(
+        spec.sourceNote,
+        isAI
+          ? isEn
+            ? 'AI generated, no authoritative teardown source'
+            : 'AI 生成，无权威拆解资料'
+          : isEn
+            ? 'None (generic template, no authoritative teardown source)'
+            : '无（通用模板，无权威拆解资料）'
+      ),
       modeledLayers: n,
       modeledParts,
       note: isAI
-        ? 'AI 未对应具体机型的真实零件数，此栏仅说明模型自身的表达规模。'
-        : '模板未对应任何具体机型的真实零件数。',
+        ? isEn
+          ? 'The AI output is not tied to a specific model, so this only describes the scale of the model itself.'
+          : 'AI 未对应具体机型的真实零件数，此栏仅说明模型自身的表达规模。'
+        : isEn
+          ? 'The template is not tied to any specific model, so there is no real part count.'
+          : '模板未对应任何具体机型的真实零件数。',
     },
   };
 }
@@ -1049,41 +1115,75 @@ function pickBlueprint(query: string): Blueprint {
 export function generateSubject(rawQuery: string): Subject {
   const query = rawQuery.trim();
   const bp = pickBlueprint(query);
+  // 英文界面下蓝图也走英文覆盖层，否则生成出来的主体是"英文 UI + 中文层名"的混排
+  const en = getLang() === 'en' ? BLUEPRINT_EN[bp.label] : undefined;
+  const layerName = (l: BlueprintLayer) => en?.layers[l.id]?.name ?? l.name;
+  const layerGroup = (l: BlueprintLayer) => en?.layers[l.id]?.group ?? l.group;
+  const layerBody = (l: BlueprintLayer) => en?.layers[l.id]?.body ?? l.body;
+  const layerStats = (l: BlueprintLayer) => {
+    const m = en?.layers[l.id]?.stats;
+    return m ? l.stats.map((x) => ({ label: m[x.label] ?? x.label, value: x.value })) : l.stats;
+  };
+  const catLabel = en?.label ?? bp.label;
+
   const spec: TeardownSpec = {
     name: query.length > 28 ? `${query.slice(0, 28)}…` : query,
-    subtitle: `${bp.label} · 通用模板重建`,
-    tagline: `按通用模板重建的 ${bp.layers.length} 层结构示意，用于演示拆解呈现方式`,
-    category: bp.label,
+    subtitle: en
+      ? `${catLabel} · generic template rebuild`
+      : `${bp.label} · 通用模板重建`,
+    tagline: en
+      ? `A ${bp.layers.length}-layer schematic rebuilt from the generic template, demonstrating how a teardown is presented`
+      : `按通用模板重建的 ${bp.layers.length} 层结构示意，用于演示拆解呈现方式`,
+    category: catLabel,
     source: 'template',
     layers: bp.layers.map((l) => ({
       id: l.id,
-      name: l.name,
-      group: l.group,
-      body: l.body,
-      stats: l.stats,
-      tools: l.tools,
+      name: layerName(l),
+      group: layerGroup(l),
+      body: layerBody(l),
+      stats: layerStats(l),
+      tools: en?.layers[l.id]?.tools ?? l.tools,
       color: l.pieces[0]?.color ?? 0x4b5563,
       shape: l.pieces[0]?.shape ?? 'box',
       size: l.pieces[0]?.size,
       pos: l.pieces[0]?.pos,
       extras: l.pieces.slice(1),
-      stepTitle: l.stepTitle,
+      stepTitle: en?.layers[l.id]?.stepTitle ?? l.stepTitle,
       explodeScale: l.explodeScale,
     })),
   };
   const s = subjectFromSpec(query, spec);
   // 模板路线保留更明确的免责叙述
-  s.overview =
-    `这是针对「${query}」按**通用模板**自动生成的结构示意，不是该产品的真实规格。` +
-    `模板按${bp.label}的常见结构给出 ${bp.layers.length} 个层：${bp.layers.map((l) => l.name).join('、')}。` +
-    `所有层的形状、位置、参数均为示意，不能作为维修依据。`;
-  s.specs = [
-    { label: '产品', value: s.name },
-    { label: '类别', value: bp.label },
-    { label: '结构层', value: `${bp.layers.length} 层` },
-    { label: '建模方式', value: '参数化重建 · 通用模板', note: '非真机扫描、非真实规格' },
-    { label: '参考图', value: '结构示意图', note: 'SVG 生成，非实拍照片' },
-    { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' },
-  ];
+  if (en) {
+    s.overview =
+      `This is a structural schematic auto-generated for “${query}” from the **generic template**; it is not the product's real specification. ` +
+      `The template gives ${bp.layers.length} layers typical of the ${catLabel} class: ${bp.layers.map(layerName).join(', ')}. ` +
+      `Every layer's shape, position and parameters are schematic and must not be used as a repair reference.`;
+    s.specs = [
+      { label: 'Product', value: s.name },
+      { label: 'Category', value: catLabel },
+      { label: 'Structural layers', value: `${bp.layers.length}` },
+      {
+        label: 'Modelling',
+        value: 'Parametric rebuild · generic template',
+        note: 'Not a physical scan, not real specs',
+      },
+      { label: 'Reference images', value: 'Schematic', note: 'Generated SVG, not photographs' },
+      { label: 'Spec confidence', value: 'Low', note: 'For demonstrating the presentation only' },
+    ];
+  } else {
+    s.overview =
+      `这是针对「${query}」按**通用模板**自动生成的结构示意，不是该产品的真实规格。` +
+      `模板按${bp.label}的常见结构给出 ${bp.layers.length} 个层：${bp.layers.map((l) => l.name).join('、')}。` +
+      `所有层的形状、位置、参数均为示意，不能作为维修依据。`;
+    s.specs = [
+      { label: '产品', value: s.name },
+      { label: '类别', value: bp.label },
+      { label: '结构层', value: `${bp.layers.length} 层` },
+      { label: '建模方式', value: '参数化重建 · 通用模板', note: '非真机扫描、非真实规格' },
+      { label: '参考图', value: '结构示意图', note: 'SVG 生成，非实拍照片' },
+      { label: '规格可信度', value: '低', note: '仅用于演示呈现方式' },
+    ];
+  }
   return s;
 }

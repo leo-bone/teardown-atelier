@@ -1,11 +1,12 @@
 import './style.css';
 import { TeardownViewer } from './core/viewer';
-import { SUBJECT_META, loadSubjectDef } from './subjects';
+import { SUBJECT_META, loadSubjectDef, localizeMetaSync } from './subjects';
 import type { SubjectMeta } from './subjects';
 import type { Subject, TeardownStep } from './core/types';
-import { TOOLS, toolIdFor, toolsForSteps } from './data/tools';
+import { TOOLS, toolIdFor, toolName, toolNote, toolsForSteps } from './data/tools';
 import { generateSubject } from './data/generator';
 import { pickProvider, remoteApiBase } from './data/provider';
+import { getLang, initLang, onLangChange, t, toggleLang } from './i18n';
 
 /** 每层的代表色，用于左栏色块 */
 
@@ -98,6 +99,7 @@ function addTab(s: Subject) {
   const b = document.createElement('button');
   b.className = 'tab';
   b.innerHTML = `<span class="tab-idx">✦</span>${esc(s.name)}`;
+  b.dataset.gen = '1';
   b.dataset.id = s.id;
   b.addEventListener('click', () => {
     skipIntro = true; // 顶栏切换不重复播入场动画
@@ -110,7 +112,7 @@ const tabsEl = document.getElementById('tabs')!;
 SUBJECT_META.forEach((s: SubjectMeta, i) => {
   const b = document.createElement('button');
   b.className = 'tab';
-  b.innerHTML = `<span class="tab-idx">0${i + 1}</span>${s.name}`;
+  b.innerHTML = `<span class="tab-idx">0${i + 1}</span>${esc(localizeMetaSync(s).name)}`;
   b.dataset.id = s.id;
   b.addEventListener('click', () => {
     skipIntro = true; // 顶栏切换不重复播入场动画
@@ -123,19 +125,21 @@ SUBJECT_META.forEach((s: SubjectMeta, i) => {
 const heroEl = document.getElementById('hero') as HTMLElement;
 const heroCards = document.getElementById('hero-cards') as HTMLElement;
 SUBJECT_META.forEach((s: SubjectMeta, i) => {
+  const m = localizeMetaSync(s);
   const accent = s.accent ?? '#5b8cff';
   const card = document.createElement('button');
   card.className = 'hero-card';
+  card.dataset.card = s.id;
   card.style.setProperty('--ac', accent);
   card.innerHTML = `
     <span class="hc-index">0${i + 1}</span>
     <span class="hc-thumb">
       <img class="hc-thumb-img" src="./og/thumb/${s.id}.png" alt="" loading="lazy" />
     </span>
-    <span class="hc-name">${s.name}</span>
-    <span class="hc-sub">${s.subtitle}</span>
-    <span class="hc-desc">${s.tagline}</span>
-    <span class="hc-cta">查看拆解 →</span>`;
+    <span class="hc-name">${esc(m.name)}</span>
+    <span class="hc-sub">${esc(m.subtitle)}</span>
+    <span class="hc-desc">${esc(m.tagline)}</span>
+    <span class="hc-cta" data-i18n="hero.cardCta">查看拆解 →</span>`;
   card.addEventListener('click', () => {
     skipIntro = false; // 从选择台进入，播一次入场
     void loadSubject(s.id);
@@ -170,9 +174,18 @@ function setHero(src: string | null, cap: string) {
 function subjectHero(s: Subject): string {
   return s.heroImage ?? `./og/${s.id}.png`;
 }
-/** 当前主体装配态产品照（对比滑块的左图） */
-function assembledHero(id: string): string {
-  return `./ref/${id}/assembled.jpg`;
+/** 大图标题：主体名 + 当前视图说明 */
+function heroCap(subjectName: string, key: string, vars?: Record<string, string | number>): string {
+  return `${subjectName} · ${t(key, vars)}`;
+}
+/**
+ * 当前主体装配态产品照（对比滑块的左图）。
+ * 运行时生成的主体没有实拍照片——返回一个标记，由调用方决定回退到整体爆炸图，
+ * 否则会拿到一个 404 的<img>，对比滑块左半边是空的。
+ */
+function assembledHero(id: string): string | null {
+  const builtin = SUBJECT_META.some((m) => m.id === id);
+  return builtin ? `./ref/${id}/assembled.jpg` : null;
 }
 
 // ---------- 拆前 / 拆后对比滑块 ----------
@@ -185,8 +198,14 @@ function setCompareX(pct: number) {
 
 function enterCompare() {
   if (activeLayerId) { hideCard(); }
+  // 生成主体没有装配态实拍，左图会 404。对这类主体直接说明原因，不给一个半坏的滑块
+  const before = assembledHero(current.id);
+  if (!before) {
+    toast(t('compare.noRef'));
+    return;
+  }
   compareMode = true;
-  (document.getElementById('cmp-before') as HTMLImageElement).src = assembledHero(current.id);
+  (document.getElementById('cmp-before') as HTMLImageElement).src = before;
   (document.getElementById('cmp-after') as HTMLImageElement).src = subjectHero(current);
   setCompareX(50);
   compareEl.removeAttribute('hidden');
@@ -237,7 +256,11 @@ document.getElementById('hero-enter')!.addEventListener('click', () => {
   void loadSubject(SUBJECT_META[0].id);
   hideHero();
 });
-document.getElementById('btn-home')!.addEventListener('click', () => showHero());
+document.getElementById('btn-home')!.addEventListener('click', () => {
+  // 回选择台时把对比滑块收掉：它z-index 高于 hero，留在那里会盖住落地页
+  if (compareMode) exitCompare();
+  showHero();
+});
 
 // ---------- 任意产品输入（MVP：本地模板 / 云端 AI 双路） ----------
 const genBtn = document.getElementById('gen-btn') as HTMLButtonElement;
@@ -245,14 +268,14 @@ const genBtn = document.getElementById('gen-btn') as HTMLButtonElement;
 async function runGenerate(raw: string) {
   const q = raw.trim();
   if (!q) {
-    toast('先输入一个产品名');
+    toast(t('toast.emptyQuery'));
     return;
   }
   const wantRemote =
     (document.getElementById('gen-remote') as HTMLInputElement).checked && !!remoteApiBase();
 
   genBtn.disabled = true;
-  genBtn.textContent = wantRemote ? 'AI 生成中…' : '生成中…';
+  genBtn.textContent = wantRemote ? t('gen.busyRemote') : t('gen.busyLocal');
   try {
     const provider = pickProvider(wantRemote);
     const s = await provider.generate(q);
@@ -268,8 +291,8 @@ async function runGenerate(raw: string) {
     void loadSubject(s.id);
     toast(
       provider.remote
-        ? `AI 已生成「${s.name}」· ${s.layers.length} 层（规格未经权威资料核对）`
-        : `已按通用模板生成「${s.name}」· ${s.layers.length} 层（示意）`
+        ? t('gen.doneRemote', { name: s.name, n: s.layers.length })
+        : t('gen.doneLocal', { name: s.name, n: s.layers.length })
     );
   } catch (e) {
     // 远端失败时静默回落到本地模板，保证功能永远可用
@@ -279,10 +302,10 @@ async function runGenerate(raw: string) {
     skipIntro = false;
     hideHero();
     void loadSubject(s.id);
-    toast(`远端生成失败（${(e as Error).message}），已回落到通用模板`);
+    toast(t('gen.fallback', { msg: (e as Error).message }));
   } finally {
     genBtn.disabled = false;
-    genBtn.textContent = '生成拆解';
+    genBtn.textContent = t('hero.genBtn');
   }
 }
 genBtn.addEventListener('click', () => {
@@ -301,7 +324,7 @@ genBtn.addEventListener('click', () => {
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { llmConfigured?: boolean } | null) => {
         if (j && j.llmConfigured === false && label) {
-          label.textContent = 'AI 生成（云端未就绪，可能不可用）';
+          label.textContent = t('hero.genRemoteDown');
         }
       })
       .catch(() => {
@@ -330,10 +353,11 @@ function showSubjectIntro(s: Subject) {
     )
     .join('');
   // 生成的主体没有装配态照片，用渐变兜底
-  const bg = s.heroImage;
-  (document.querySelector('.si-bg') as HTMLElement).style.backgroundImage = bg
-    ? `linear-gradient(135deg, #1a2030, #0c0e11)`
-    : `linear-gradient(135deg, #1a2030, #0c0e11), url("${assembledHero(s.id)}")`;
+  // 内置主体有装配态实拍，用它做入场背景；生成主体只有结构示意图，退回纯渐变
+  const ref = assembledHero(s.id);
+  (document.querySelector('.si-bg') as HTMLElement).style.backgroundImage = ref
+    ? `linear-gradient(135deg, #1a2030, #0c0e11), url("${ref}")`
+    : `linear-gradient(135deg, #1a2030, #0c0e11)`;
   introEl.removeAttribute('hidden');
 }
 function hideSubjectIntro() {
@@ -360,6 +384,7 @@ function toast(msg: string) {
 function updateShareMeta(s: Subject) {
   const url = shareUrlFor(s.id);
   document.title = `${s.name} · Teardown Atelier`;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', s.tagline);
   const ogTitle = document.querySelector('meta[property="og:title"]') as HTMLMetaElement | null;
   const ogDesc = document.querySelector('meta[property="og:description"]') as HTMLMetaElement | null;
   const ogImage = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null;
@@ -371,7 +396,7 @@ function updateShareMeta(s: Subject) {
   if (twImage) twImage.content = imageUrl;
   const x = document.getElementById('share-x') as HTMLAnchorElement | null;
   const wb = document.getElementById('share-wb') as HTMLAnchorElement | null;
-  const text = encodeURIComponent(`${s.name} · 工程级 3D 拆解：${s.tagline}`);
+  const text = encodeURIComponent(t('share.text', { name: s.name, tagline: s.tagline }));
   if (x) x.href = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
   if (wb) wb.href = `https://service.weibo.com/share/share.php?title=${text}&url=${encodeURIComponent(url)}`;
 }
@@ -383,9 +408,9 @@ document.getElementById('btn-share')!.addEventListener('click', async () => {
       return;
     }
     await navigator.clipboard.writeText(url);
-    toast('分享链接已复制 ✓');
+    toast(t('share.copied'));
   } catch {
-    toast('复制失败，请手动复制地址栏链接');
+    toast(t('share.failed'));
   }
 });
 
@@ -491,11 +516,11 @@ function renderInfo(s: Subject) {
     const arrow = { up: '▲', down: '▼', flat: '=' };
     (document.getElementById('cmp-rows') as HTMLElement).innerHTML = s.comparison.rows
       .map(
-        (r) => `<div class="cmp-row ${r.delta}">
-          <span class="cmp-label">${r.label}</span>
-          <span class="cmp-prev">${r.prev}</span>
-          <span class="cmp-arrow">${arrow[r.delta]}</span>
-          <span class="cmp-curr">${r.curr}</span>
+        (r) => `<div class="cmp-row ${esc(r.delta)}">
+          <span class="cmp-label">${esc(r.label)}</span>
+          <span class="cmp-prev">${esc(r.prev)}</span>
+          <span class="cmp-arrow">${arrow[r.delta] ?? '='}</span>
+          <span class="cmp-curr">${esc(r.curr)}</span>
         </div>`
       )
       .join('');
@@ -511,7 +536,8 @@ function renderInfo(s: Subject) {
       s.fidelity.actualParts.toLocaleString();
     (document.getElementById('fid-modeled') as HTMLElement).textContent =
       s.fidelity.modeledParts.toLocaleString();
-    (document.getElementById('fid-source') as HTMLElement).textContent = `依据：${s.fidelity.source}`;
+    (document.getElementById('fid-source') as HTMLElement).textContent =
+      `${t('fid.sourcePrefix')}${s.fidelity.source}`;
     (document.getElementById('fid-note') as HTMLElement).textContent = s.fidelity.note;
   } else {
     fp.style.display = 'none';
@@ -525,9 +551,9 @@ function renderInfo(s: Subject) {
   const toolList = toolsForSteps(steps);
   grid.innerHTML = toolList
     .map(
-      (t) => `<figure class="tool-card">
-        <img src="${t.image}" alt="${t.name}" loading="lazy" />
-        <figcaption><strong>${esc(t.name)}</strong><span>${esc(t.note)}</span></figcaption>
+      (tl) => `<figure class="tool-card">
+        <img src="${tl.image}" alt="${esc(toolName(tl))}" loading="lazy" />
+        <figcaption><strong>${esc(toolName(tl))}</strong><span>${esc(toolNote(tl))}</span></figcaption>
       </figure>`
     )
     .join('');
@@ -575,12 +601,12 @@ async function loadSubject(id: string) {
   viewer.load(s);
   viewer.setLabelMode('dot');
   const lb = document.getElementById('btn-labels') as HTMLElement;
-  (lb.querySelector('.btn-txt') as HTMLElement).textContent = '标注';
+  (lb.querySelector('.btn-txt') as HTMLElement).textContent = t('tool.labelsDot');
   lb.classList.add('on');
   renderInfo(s);
   updateShareMeta(s);
   // 图片为主：默认展示整体爆炸大图
-  setHero(subjectHero(s), `${s.name} · 整体爆炸图`);
+  setHero(subjectHero(s), heroCap(s.name, 'hero.capExploded'));
   if (stepMode) renderStep(0);
   (document.getElementById('explode') as HTMLInputElement).value = '0';
   (document.getElementById('explode-val') as HTMLElement).textContent = '0%';
@@ -622,9 +648,9 @@ function selectLayer(layerId: string, focus: boolean) {
 
   // 图片为主：中央大图切到该层的真实参考图（无则回退整体爆炸图）
   if (layer.refImage) {
-    setHero(layer.refImage, `${layer.name} · 真实参考图`);
+    setHero(layer.refImage, heroCap(layer.name, 'hero.capRef'));
   } else {
-    setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
+    setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
   }
 
   if (!hs) { hideCard(); return; }
@@ -657,7 +683,7 @@ function hideCard() {
   activeLayerId = null;
   viewer.setLabelFocus(null);
   // 取消选中：中央大图回到整体爆炸图
-  setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
+  setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
   document.querySelectorAll('.layer-item.active, .hotspot-label.active').forEach((e) =>
     e.classList.remove('active')
   );
@@ -675,8 +701,8 @@ function buildSteps(s: Subject): TeardownStep[] {
   if (s.steps && s.steps.length) return s.steps;
   return s.layers.map((l) => ({
     id: `auto-${l.id}`,
-    title: `拆下 ${l.name}`,
-    body: `${l.group} · ${l.name}。这一层可以在左栏单独显隐、隔离查看，也可以用剖切工具看内部堆叠。`,
+    title: t('autoStep.title', { name: l.name }),
+    body: t('autoStep.body', { group: l.group, name: l.name }),
     layers: [l.id],
   }));
 }
@@ -702,7 +728,7 @@ function exitStepMode() {
   viewer.isolate(null);
   viewer.resetView();
   document.querySelectorAll('.layer-item').forEach((e) => e.classList.remove('solo', 'active', 'hidden-layer'));
-  setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
+  setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
 }
 
 function renderStep(i: number) {
@@ -723,7 +749,7 @@ function renderStep(i: number) {
           const id = toolIdFor(t);
           const def = id ? TOOLS[id] : undefined;
           const img = def
-            ? `<img class="tool-chip-img" src="${def.image}" alt="${def.name}" loading="lazy" />`
+            ? `<img class="tool-chip-img" src="${def.image}" alt="${esc(toolName(def))}" loading="lazy" />`
             : '';
           return `<span class="tool-chip${def ? ' has-img' : ''}">${img}${esc(t)}</span>`;
         })
@@ -732,8 +758,12 @@ function renderStep(i: number) {
   toolsEl.style.display = hasTools ? '' : 'none';
 
   const statsEl = document.getElementById('step-stats')!;
+  // 必须转义：AI 生成主体的 stats.label/value 直接来自 LLM 输出
   statsEl.innerHTML = (st.stats ?? [])
-    .map((s) => `<div class="stat-row"><span class="k">${s.label}</span><span class="v">${s.value}</span></div>`)
+    .map(
+      (x) =>
+        `<div class="stat-row"><span class="k">${esc(x.label)}</span><span class="v">${esc(x.value)}</span></div>`
+    )
     .join('');
 
   const dotsEl = document.getElementById('step-dots')!;
@@ -776,9 +806,9 @@ function renderStep(i: number) {
     .map((id) => current.layers.find((l) => l.id === id))
     .find((l) => l?.refImage);
   if (withRef) {
-    setHero(withRef.refImage!, `${withRef.name} · 步骤 ${stepIndex + 1}`);
+    setHero(withRef.refImage!, heroCap(withRef.name, 'hero.capStep', { n: stepIndex + 1 }));
   } else {
-    setHero(subjectHero(current), `${current.name} · 整体爆炸图`);
+    setHero(subjectHero(current), heroCap(current.name, 'hero.capExploded'));
   }
 }
 
@@ -811,7 +841,7 @@ document.getElementById('btn-photo')!.addEventListener('click', (ev) => {
   const btn = ev.currentTarget as HTMLElement;
   const next = !viewer.getPhotoGrade();
   viewer.setPhotoGrade(next);
-  (btn.querySelector('.btn-txt') as HTMLElement).textContent = next ? '影调' : '素图';
+  (btn.querySelector('.btn-txt') as HTMLElement).textContent = next ? t('tool.photoOn') : t('tool.photoOff');
   btn.classList.toggle('on', next);
 });
 
@@ -836,7 +866,10 @@ document.getElementById('btn-record')!.addEventListener('click', async () => {
   try {
     const blob = await viewer.record(REC_SECONDS, (p) => {
       bar.style.width = `${p * 100}%`;
-      label.textContent = `正在录制 ${recFmt(p * REC_SECONDS)} / ${recFmt(REC_SECONDS)}`;
+      label.textContent = t('rec.running', {
+        cur: recFmt(p * REC_SECONDS),
+        total: recFmt(REC_SECONDS),
+      });
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -844,7 +877,7 @@ document.getElementById('btn-record')!.addEventListener('click', async () => {
     a.download = `${current.id}-teardown.webm`;
     a.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 5000);
-    toast(`拆解录像已下载 ✓（WebM，${(blob.size / 1024 / 1024).toFixed(1)} MB）`);
+    toast(t('rec.done', { size: (blob.size / 1024 / 1024).toFixed(1) }));
   } catch (e) {
     toast((e as Error).message || '录制失败');
   } finally {
@@ -859,7 +892,9 @@ document.getElementById('btn-record')!.addEventListener('click', async () => {
 
 document.getElementById('btn-shot')!.addEventListener('click', () => {
   const btn = document.getElementById('btn-shot') as HTMLElement;
-  btn.textContent = '渲染中…';
+  const shotLabel = btn.querySelector('[data-i18n="tool.shot"]') as HTMLElement | null;
+  if (shotLabel) shotLabel.textContent = t('tool.shotBusy');
+  else btn.textContent = t('tool.shotBusy');
   // 让浏览器先画出按钮文字，再去做那一帧高分辨率渲染
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -872,7 +907,8 @@ document.getElementById('btn-shot')!.addEventListener('click', () => {
       } catch (e) {
         console.error('导出失败', e);
       }
-      btn.textContent = '导出 PNG';
+      if (shotLabel) shotLabel.textContent = t('tool.shot');
+      else btn.textContent = t('tool.shot');
     });
   });
 });
@@ -892,7 +928,7 @@ document.getElementById('btn-labels')!.addEventListener('click', (ev) => {
   const next = order[(cur + 1) % order.length];
   viewer.setLabelMode(next);
   (btn.querySelector('.btn-txt') as HTMLElement).textContent =
-    { dot: '标注', full: '全显', none: '隐藏' }[next];
+    { dot: t('tool.labelsDot'), full: t('tool.labelsFull'), none: t('tool.labelsNone') }[next];
   btn.classList.toggle('on', next !== 'none');
 });
 
@@ -927,7 +963,55 @@ addEventListener('keydown', (ev) => {
   if (stepMode && ev.key === 'ArrowLeft') renderStep(stepIndex - 1);
 });
 
+// ---------- 语言切换 ----------
+const langBtn = document.getElementById('btn-lang') as HTMLButtonElement;
+const langTxt = document.getElementById('btn-lang-txt') as HTMLElement;
+
+/** 按钮上显示"点一下会切到哪个语言"，而不是当前语言——这是切换按钮该有的语义 */
+function syncLangBtn() {
+  langTxt.textContent = getLang() === 'zh' ? 'EN' : '中';
+}
+
+/** 顶栏 tab / 落地卡片的文字随语言刷新（不重建节点，只改文本） */
+function refreshMetaLabels() {
+  tabsEl.querySelectorAll<HTMLElement>('.tab:not([data-gen])').forEach((el) => {
+    const id = el.dataset.id!;
+    const m = localizeMetaSync(SUBJECT_META.find((x) => x.id === id)!);
+    const idx = el.querySelector('.tab-idx');
+    el.textContent = '';
+    if (idx) el.appendChild(idx);
+    el.appendChild(document.createTextNode(m.name));
+  });
+  SUBJECT_META.forEach((s, i) => {
+    const card = heroCards.querySelector<HTMLElement>(`[data-card="${s.id}"]`);
+    if (!card) return;
+    const m = localizeMetaSync(s);
+    (card.querySelector('.hc-name') as HTMLElement).textContent = m.name;
+    (card.querySelector('.hc-sub') as HTMLElement).textContent = m.subtitle;
+    (card.querySelector('.hc-desc') as HTMLElement).textContent = m.tagline;
+  });
+}
+
+langBtn.addEventListener('click', () => {
+  toggleLang();
+  syncLangBtn();
+});
+
+// 语言一变，当前主体的所有文字都要重渲染（3D 模型本身不用重建）
+onLangChange(() => {
+  refreshMetaLabels();
+  if (current) {
+    renderInfo(current);
+    updateShareMeta(current);
+    if (activeLayerId) selectLayer(activeLayerId, false);
+    if (stepMode) renderStep(stepIndex);
+  }
+  syncLangBtn();
+});
+
 // ---------- 启动 ----------
+initLang();
+syncLangBtn();
 // URL 参数：?subject=<id>&explode=0-100&photo=0/1
 // 既是分享深链接，也是截图脚本控制初始视图的入口
 const params = new URLSearchParams(location.search);
@@ -948,38 +1032,47 @@ const initialId =
 if (restoredQuery && initialId.startsWith('gen-')) {
   dynamicSubjects.push(generateSubject(restoredQuery));
 }
-// 落地页：有 ?subject 深链（含 gen 重建）才直接进产品；否则先展示选择台，
-// 后台预载首个主体，方便「直接进入工坊」秒开。
-if (wanted || initialId.startsWith('gen-')) {
-  void loadSubject(initialId);
-} else {
-  showHero();
-  skipIntro = true;
-  void loadSubject(SUBJECT_META[0].id);
-}
 
-const exRaw = params.get('explode');
-if (exRaw !== null && Number.isFinite(Number(exRaw))) {
-  const v = Math.max(0, Math.min(100, Number(exRaw)));
-  viewer.setExplode(v / 100);
-  (document.getElementById('explode') as HTMLInputElement).value = String(v);
-  (document.getElementById('explode-val') as HTMLElement).textContent = `${v}%`;
-}
+/**
+ * URL 深链参数必须在 loadSubject **之后**应用。
+ *
+ * 之前这段是同步写在 loadSubject() 调用旁边的，但 loadSubject 是async：
+ * viewer.load() 内部会把 explodeT / explodeTarget / sectionEnabled 全部复位，
+ * 于是 ?explode=80 这类参数刚设上就被清掉，深链静默失效（分享链接与截图脚本都依赖它）。
+ * 现在改成 loadSubject 完成后逐个应用。
+ */
+async function applyDeepLinkParams() {
+  const exRaw = params.get('explode');
+  if (exRaw !== null && Number.isFinite(Number(exRaw))) {
+    const v = Math.max(0, Math.min(100, Number(exRaw)));
+    viewer.setExplode(v / 100);
+    (document.getElementById('explode') as HTMLInputElement).value = String(v);
+    (document.getElementById('explode-val') as HTMLElement).textContent = `${v}%`;
+  }
 
-const secRaw = params.get('section');
-if (secRaw !== null) {
-  if (secRaw === 'off') {
-    viewer.setSection(false);
-  } else if (secRaw === 'x' || secRaw === 'y' || secRaw === 'z') {
-    viewer.setSection(true, secRaw, 0);
-    document.querySelectorAll('[data-sec]').forEach((x) => x.classList.remove('on'));
-    document.querySelector(`[data-sec="${secRaw}"]`)?.classList.add('on');
+  const secRaw = params.get('section');
+  if (secRaw !== null) {
+    if (secRaw === 'off') {
+      viewer.setSection(false);
+    } else if (secRaw === 'x' || secRaw === 'y' || secRaw === 'z') {
+      viewer.setSection(true, secRaw, 0);
+      document.querySelectorAll('[data-sec]').forEach((x) => x.classList.remove('on'));
+      document.querySelector(`[data-sec="${secRaw}"]`)?.classList.add('on');
+    }
+  }
+
+  if (params.get('photo') === '0') {
+    viewer.setPhotoGrade(false);
+    const pb = document.getElementById('btn-photo') as HTMLElement;
+    (pb.querySelector('.btn-txt') as HTMLElement).textContent = t('tool.photoOff');
+    pb.classList.remove('on');
   }
 }
 
-if (params.get('photo') === '0') {
-  viewer.setPhotoGrade(false);
-  const pb = document.getElementById('btn-photo') as HTMLElement;
-  (pb.querySelector('.btn-txt') as HTMLElement).textContent = '素图';
-  pb.classList.remove('on');
-}
+// 落地页：有 ?subject 深链（含 gen 重建）才直接进产品；否则先展示选择台，
+// 后台预载首个主体，方便「直接进入工坊」秒开。
+const boot = wanted || initialId.startsWith('gen-')
+  ? loadSubject(initialId)
+  : (showHero(), skipIntro = true, loadSubject(SUBJECT_META[0].id));
+
+void boot.then(applyDeepLinkParams);

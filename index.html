@@ -28,25 +28,29 @@
           <span class="brand-mark">TA</span>
           <div class="brand-text">
             <strong>Teardown Atelier</strong>
-            <span>工程级 3D 拆解工坊</span>
+            <span data-i18n="brand.subtitle">工程级 3D 拆解工坊</span>
           </div>
         </div>
         <nav id="tabs"></nav>
         <div class="topbar-right">
-          <span class="badge">参数化重建 · 非真机扫描</span>
+          <span class="badge" data-i18n="badge.parametric">参数化重建 · 非真机扫描</span>
           <div class="share-group">
-            <button id="btn-share" class="mini" title="复制分享链接">
+            <button id="btn-share" class="mini" title="复制分享链接" data-i18n="share.copy" data-i18n-attr="title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
-              <span>分享</span>
+              <span data-i18n="share.label">分享</span>
             </button>
-            <a id="share-x" class="mini icon" target="_blank" rel="noopener" title="分享到 X">X</a>
-            <a id="share-wb" class="mini icon" target="_blank" rel="noopener" title="分享到微博">微</a>
+            <a id="share-x" class="mini icon" target="_blank" rel="noopener" title="分享到 X" data-i18n="share.toX" data-i18n-attr="title">X</a>
+            <a id="share-wb" class="mini icon" target="_blank" rel="noopener" title="分享到微博" data-i18n="share.toWeibo" data-i18n-attr="title">微</a>
           </div>
-          <button id="btn-home" class="mini" title="返回选择页">
+          <button id="btn-home" class="mini" title="返回选择页" data-i18n="home.back" data-i18n-attr="title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
-            <span>选择台</span>
+            <span data-i18n="home.label">选择台</span>
           </button>
-          <a class="gh-link" href="https://github.com/leo-bone/teardown-atelier" target="_blank" rel="noopener" title="在 GitHub 上查看">
+          <button id="btn-lang" class="mini lang-toggle" title="切换语言 / Language" data-i18n="lang.toggle" data-i18n-attr="title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg>
+            <span id="btn-lang-txt">EN</span>
+          </button>
+          <a class="gh-link" href="https://github.com/leo-bone/teardown-atelier" target="_blank" rel="noopener" title="在 GitHub 上查看" data-i18n="gh.view" data-i18n-attr="title">
             <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
             <span>GitHub</span>
           </a>
@@ -57,25 +61,26 @@
       <div id="hero">
         <div class="hero-bg"></div>
         <div class="hero-inner">
-          <div class="hero-kicker">工程级 3D 拆解 · Teardown Atelier</div>
+          <div class="hero-kicker" data-i18n="hero.kicker">工程级 3D 拆解 · Teardown Atelier</div>
           <h1 class="hero-title">把科技产品<span>拆开看</span></h1>
-          <p class="hero-sub">基于公开规格与权威拆解的参数化重建 · 可旋转 · 可爆炸 · 可剖切</p>
+          <p class="hero-sub" data-i18n="hero.sub">基于公开规格与权威拆解的参数化重建 · 可旋转 · 可爆炸 · 可剖切</p>
           <div id="hero-cards" class="hero-cards"></div>
           <div class="hero-gen">
-            <div class="hero-gen-kicker">或者，随便输入一个产品名</div>
+            <div class="hero-gen-kicker" data-i18n="hero.genKicker">或者，随便输入一个产品名</div>
             <div class="hero-gen-row">
-              <input id="gen-input" type="text" maxlength="40" placeholder="例如：扫地机器人 / 电饭煲 / 自行车 / 打印机" autocomplete="off" />
-              <button id="gen-btn" class="hero-gen-btn">生成拆解</button>
+              <input id="gen-input" type="text" maxlength="40" placeholder="例如：扫地机器人 / 电饭煲 / 自行车 / 打印机" autocomplete="off"
+                     data-i18n="hero.genPlaceholder" data-i18n-attr="placeholder" />
+              <button id="gen-btn" class="hero-gen-btn" data-i18n="hero.genBtn">生成拆解</button>
             </div>
             <label class="hero-gen-toggle" id="gen-remote-wrap" hidden>
               <input type="checkbox" id="gen-remote" />
-              <span>用 AI 生成真实规格（需配置云端代理）</span>
+              <span data-i18n="hero.genRemote">用 AI 生成真实规格（需配置云端代理）</span>
             </label>
-            <div class="hero-gen-note">通用模板重建 · 结构示意图 · 非真实规格（演示用）</div>
+            <div class="hero-gen-note" data-i18n="hero.genNote">通用模板重建 · 结构示意图 · 非真实规格（演示用）</div>
           </div>
           <div class="hero-foot">
-            选一台开始
-            <button id="hero-enter" class="hero-enter">直接进入工坊 →</button>
+            <span data-i18n="hero.foot">选一台开始</span>
+            <button id="hero-enter" class="hero-enter" data-i18n="hero.enter">直接进入工坊 →</button>
           </div>
         </div>
       </div>
@@ -93,7 +98,7 @@
                 <span class="repair-score" id="repair-score">—</span>
                 <div class="repair-meta">
                   <span id="repair-diff" class="repair-diff"></span>
-                  <span class="repair-label">可维护性 / 拆解难度</span>
+                  <span class="repair-label" data-i18n="repair.label">可维护性 / 拆解难度</span>
                 </div>
               </div>
               <div class="repair-tools" id="repair-tools"></div>
@@ -103,14 +108,14 @@
 
           <section class="panel">
             <div class="panel-head">
-              <h2>结构层</h2>
-              <button id="btn-show-all" class="mini">全显</button>
+              <h2 data-i18n="panel.layers">结构层</h2>
+              <button id="btn-show-all" class="mini" data-i18n="panel.showAll">全显</button>
             </div>
             <div id="layer-list"></div>
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>规格</h2></div>
+            <div class="panel-head"><h2 data-i18n="panel.specs">规格</h2></div>
             <table id="spec-table"></table>
           </section>
         </aside>
@@ -128,71 +133,71 @@
             <img id="cmp-after" src="" alt="" draggable="false" />
             <img id="cmp-before" src="" alt="" draggable="false" />
             <div id="cmp-divider"><span id="cmp-handle"></span></div>
-            <span class="cmp-tag cmp-tag-l">装配态</span>
-            <span class="cmp-tag cmp-tag-r">拆解态</span>
+            <span class="cmp-tag cmp-tag-l" data-i18n="cmp.assembled">装配态</span>
+            <span class="cmp-tag cmp-tag-r" data-i18n="cmp.exploded">拆解态</span>
           </div>
 
           <!-- 3D 把玩小窗（右下角，可收起） -->
           <div id="play-widget">
             <div class="pw-bar">
-              <span class="pw-title">3D 把玩</span>
-              <button id="pw-toggle" class="mini" title="收起 / 展开">—</button>
+              <span class="pw-title" data-i18n="pw.title">3D 把玩</span>
+              <button id="pw-toggle" class="mini" title="收起 / 展开" data-i18n="pw.collapse" data-i18n-attr="title">—</button>
             </div>
             <div id="viewport"></div>
             <div id="labels"></div>
             <div id="loading">
               <div class="loading-mark">TA</div>
               <div class="loading-bar"></div>
-              <div>正在烘焙影棚环境…</div>
+              <div data-i18n="loading.baking">正在烘焙影棚环境…</div>
             </div>
             <!-- 底部工具条 -->
             <div id="toolbar">
               <div class="tool-group">
-                <label>拆解程度</label>
+                <label data-i18n="tool.explode">拆解程度</label>
                 <input type="range" id="explode" min="0" max="100" value="0" />
                 <span id="explode-val" class="mono">0%</span>
               </div>
               <div class="tool-group" id="section-tools">
-                <label>剖切</label>
-                <button class="mini toggle" data-sec="off">关</button>
+                <label data-i18n="tool.section">剖切</label>
+                <button class="mini toggle" data-sec="off" data-i18n="tool.sectionOff">关</button>
                 <button class="mini toggle" data-sec="x">X</button>
                 <button class="mini toggle" data-sec="y">Y</button>
                 <button class="mini toggle" data-sec="z">Z</button>
               </div>
               <div class="tool-group">
-                <button id="btn-photo" class="mini toggle on">
+                <button id="btn-photo" class="mini toggle on" data-i18n-attr="title">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
-                  <span class="btn-txt">影调</span>
+                  <span class="btn-txt" data-i18n="tool.photoOn">影调</span>
                 </button>
                 <button id="btn-rotate" class="mini toggle on">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v4h-4"/></svg>
-                  <span class="btn-txt">自转</span>
+                  <span class="btn-txt" data-i18n="tool.rotate">自转</span>
                 </button>
                 <button id="btn-labels" class="mini toggle on">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
-                  <span class="btn-txt">标注</span>
+                  <span class="btn-txt" data-i18n="tool.labelsDot">标注</span>
                 </button>
               </div>
               <div class="tool-group">
                 <button id="btn-compare" class="mini toggle">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg>
-                  <span class="btn-txt">对比</span>
+                  <span class="btn-txt" data-i18n="tool.compare">对比</span>
                 </button>
                 <button id="btn-steps" class="mini toggle">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h16M4 18h7"/></svg>
-                  <span class="btn-txt">分步</span>
+                  <span class="btn-txt" data-i18n="tool.steps">分步</span>
                 </button>
                 <button id="btn-record" class="mini">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
-                  录像
+                  <span data-i18n="tool.record">录像</span>
                 </button>
                 <button id="btn-shot" class="mini">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
-                  导出 PNG
+                  <span data-i18n="tool.shot">导出 PNG</span>
                 </button>
                 <button id="btn-reset" class="mini">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>
-                  复位
+                  <span data-i18n="tool.reset">复位</span>
                 </button>
               </div>
             </div>
@@ -203,12 +208,12 @@
             <div class="step-head">
               <span class="step-count"><b id="step-cur">1</b><span id="step-total">/9</span></span>
               <div class="step-title-wrap">
-                <div class="step-kicker">分步拆解</div>
+                <div class="step-kicker" data-i18n="step.kicker">分步拆解</div>
                 <h3 id="step-title"></h3>
               </div>
               <div class="step-nav">
-                <button id="step-prev" class="mini" title="上一步">←</button>
-                <button id="step-next" class="mini" title="下一步">→</button>
+                <button id="step-prev" class="mini" title="上一步" data-i18n="step.prev" data-i18n-attr="title">←</button>
+                <button id="step-next" class="mini" title="下一步" data-i18n="step.next" data-i18n-attr="title">→</button>
               </div>
             </div>
             <p id="step-body"></p>
@@ -219,7 +224,7 @@
 
           <!-- 悬浮信息卡 -->
           <div id="hotcard" hidden>
-            <button id="hotcard-close" aria-label="关闭">×</button>
+            <button id="hotcard-close" aria-label="关闭" data-i18n="hotcard.close" data-i18n-attr="aria-label">×</button>
             <h3 id="hotcard-title"></h3>
             <div id="hotcard-body"></div>
             <div id="hotcard-stats"></div>
@@ -230,10 +235,10 @@
             <div class="rec-card">
               <div class="rec-head">
                 <span class="rec-dot"></span>
-                <span id="rec-label">正在录制 00:00 / 00:24</span>
+                <span id="rec-label" data-i18n="rec.idle">正在录制 00:00 / 00:24</span>
               </div>
               <div class="rec-track"><div id="rec-bar" class="rec-bar"></div></div>
-              <p class="rec-note">自动分步动画：装配自转 → 连续爆炸 → 爆炸态自转 → 收起。请保持本标签页在前台。</p>
+              <p class="rec-note" data-i18n="rec.note">自动分步动画：装配自转 → 连续爆炸 → 爆炸态自转 → 收起。请保持本标签页在前台。</p>
             </div>
           </div>
 
@@ -241,12 +246,12 @@
           <div id="subject-intro" hidden>
             <div class="si-bg"></div>
             <div class="si-inner">
-              <div class="si-kicker">工程级拆解</div>
+              <div class="si-kicker" data-i18n="intro.kicker">工程级拆解</div>
               <h1 class="si-title" id="si-title"></h1>
               <p class="si-sub" id="si-sub"></p>
               <div class="si-stats" id="si-stats"></div>
-              <button id="si-enter" class="si-enter">开始拆解 →</button>
-              <div class="si-note">参数化重建 · 非真机扫描 · 规格依据公开资料与权威拆解</div>
+              <button id="si-enter" class="si-enter" data-i18n="intro.enter">开始拆解 →</button>
+              <div class="si-note" data-i18n="intro.note">参数化重建 · 非真机扫描 · 规格依据公开资料与权威拆解</div>
             </div>
           </div>
         </main>
@@ -254,19 +259,19 @@
         <!-- 右栏：叙事 + 对比 -->
         <aside id="inspector">
           <section class="panel">
-            <div class="panel-head"><h2>概述</h2></div>
+            <div class="panel-head"><h2 data-i18n="panel.overview">概述</h2></div>
             <div id="s-overview" class="prose"></div>
           </section>
           <section class="panel">
-            <div class="panel-head"><h2>设计解读</h2></div>
+            <div class="panel-head"><h2 data-i18n="panel.narrative">设计解读</h2></div>
             <div id="s-narrative" class="prose"></div>
           </section>
           <section class="panel" id="fidelity-panel">
-            <div class="panel-head"><h2>建模颗粒度</h2></div>
+            <div class="panel-head"><h2 data-i18n="panel.fidelity">建模颗粒度</h2></div>
             <div class="fid-grid">
               <div class="fid-cell">
                 <span class="fid-num" id="fid-actual"></span>
-                <span class="fid-cap">真实零件量</span>
+                <span class="fid-cap" data-i18n="fid.actual">真实零件量</span>
               </div>
               <div class="fid-cell">
                 <span class="fid-num" id="fid-modeled"></span>
@@ -282,8 +287,8 @@
             <div id="cmp-rows"></div>
           </section>
           <section class="panel" id="tools-panel">
-            <div class="panel-head"><h2>工具图鉴</h2></div>
-            <p class="muted small">这台设备拆解会用到的工具，图来自通用工装实拍。</p>
+            <div class="panel-head"><h2 data-i18n="panel.tools">工具图鉴</h2></div>
+            <p class="muted small" data-i18n="tools.note">这台设备拆解会用到的工具，图来自通用工装实拍。</p>
             <div id="tools-grid" class="tools-grid"></div>
           </section>
         </aside>

@@ -5,13 +5,13 @@
  * 让 API Key 永远不出现在浏览器里。
  *
  * 端点：
- *   POST /api/teardown   body: { "query": "扫地机器人" }
+ *   POST /api/teardown   body: { "query": "扫地机器人", "lang": "zh" | "en" }
  *   返回 TeardownSpec JSON（schema 见 worker/SCHEMA.md）
  *
  * 环境变量 / Secret：
- *   LLM_BASE_URL   OpenAI 兼容接口地址，默认 https://api.openai.com/v1
+ *   LLM_BASE_URL   OpenAI 兼容接口地址，默认 https://api.deepseek.com/v1
  *   LLM_API_KEY    （Secret）接口密钥
- *   LLM_MODEL      模型名，默认 gpt-4o-mini
+ *   LLM_MODEL      模型名，默认 deepseek-chat（与 wrangler.toml 保持一致）
  *   ALLOWED_ORIGIN 允许的跨域来源，默认 *；建议填 https://leo-bone.github.io
  *
  * 免费额度内可用：缓存命中不调 LLM；同一产品 7 天内直接返回缓存。
@@ -33,7 +33,7 @@ const SYSTEM_PROMPT = `你是消费电子与工业产品的拆解工程师。用
 硬性要求：
 0. **JSON 的结构与键名必须使用 ASCII 半角标点**（半角冒号、半角逗号、半角花括号）。只有字符串的**内容**里可以用中文标点。
 1. 只输出 JSON，不要 markdown 代码块，不要任何解释文字。
-2. 全部字段用简体中文（id / accent 除外）。
+2. 全部字段使用 \`LANG\` 指定的语言（id / accent 除外）；未指定时用简体中文。技术型号、数字与单位在任何语言下都保持原样。
 3. layers 给 4-8 个功能层，按"从外到内"的拆解顺序排列。
 4. 每个 layer 必须给几何参数，用于 3D 重建：
    - shape 只能是 box / slab / cyl / lens / frame / blade 之一
@@ -76,7 +76,8 @@ JSON 结构：
   ]
 }`;
 
-const USER_TMPL = (query: string) => `产品：${query}
+const USER_TMPL = (query: string, lang?: string) => `产品：${query}
+LANG=${lang ?? 'zh'}
 
 请按系统提示的 JSON 结构输出该产品的拆解规格。若该产品你很陌生，就按同类产品的常见结构给出合理推断，并在 overview 里明确标注"以下为结构推断"。`;
 
@@ -285,9 +286,10 @@ async function rateLimited(ip: string, limit = 12): Promise<boolean> {
   return false;
 }
 
-async function callLLM(env: Env, query: string): Promise<unknown> {
-  const base = (env.LLM_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
-  const model = env.LLM_MODEL ?? 'gpt-4o-mini';
+async function callLLM(env: Env, query: string, lang?: string): Promise<unknown> {
+  // 默认值必须与 wrangler.toml 一致，否则 /health 报出来的模型名是错的
+  const base = (env.LLM_BASE_URL ?? 'https://api.deepseek.com/v1').replace(/\/+$/, '');
+  const model = env.LLM_MODEL ?? 'deepseek-chat';
   const key = env.LLM_API_KEY;
   if (!key) throw new Error('服务端未配置 LLM_API_KEY');
 
@@ -306,7 +308,12 @@ async function callLLM(env: Env, query: string): Promise<unknown> {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: nudge ? `${USER_TMPL(query)}\n\n上次返回的 JSON 有语法错误，请只输出一个语法完全合法的 JSON 对象，不要在字符串里使用未转义的引号或换行。` : USER_TMPL(query) },
+          {
+            role: 'user',
+            content: nudge
+              ? `${USER_TMPL(query, lang)}\n\n上次返回的 JSON 有语法错误，请只输出一个语法完全合法的 JSON 对象，不要在字符串里使用未转义的引号或换行。`
+              : USER_TMPL(query, lang),
+          },
         ],
       }),
     });
@@ -358,7 +365,7 @@ export default {
         {
           ok: true,
           llmConfigured: !!env.LLM_API_KEY,
-          model: env.LLM_MODEL ?? 'gpt-4o-mini',
+          model: env.LLM_MODEL ?? 'deepseek-chat',
         },
         200,
         h
@@ -379,10 +386,14 @@ export default {
     }
 
     let query = '';
+    let lang: 'zh' | 'en' | undefined;
     try {
-      const body = (await request.json()) as { query?: unknown };
+      const body = (await request.json()) as { query?: unknown; lang?: unknown };
       if (typeof body.query !== 'string') throw new Error('query 必须是字符串');
       query = body.query.trim().slice(0, MAX_QUERY);
+      // 目标语言：只接受白名单里的两个值，其余一律按中文处理，
+      // 避免把任意字符串塞进 prompt
+      if (body.lang === 'en' || body.lang === 'zh') lang = body.lang;
     } catch (e) {
       return json({ error: `请求体无效：${(e as Error).message}` }, 400, h);
     }
@@ -404,7 +415,7 @@ export default {
     // 2) 调 LLM
     let spec: unknown;
     try {
-      spec = await callLLM(env, query);
+      spec = await callLLM(env, query, lang);
     } catch (e) {
       return json({ error: (e as Error).message }, 502, h);
     }
