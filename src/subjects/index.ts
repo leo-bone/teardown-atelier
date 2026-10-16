@@ -72,6 +72,13 @@ export const SUBJECT_META: SubjectMeta[] = [
     tagline: '3300 万像素堆栈 CMOS + BIONZ XR + 8 级五轴防抖，影像旗舰的工程基准',
     accent: '#8a1c2b',
   },
+  {
+    id: 'roadster',
+    name: 'Tesla Roadster（第二代）',
+    subtitle: 'Tesla · 2026 年 10 月 15 日发布 · SpaceX A71 冷气推进',
+    tagline: '10 具冷气推进器、80 kN、0–60 mph 低于 0.59 秒——它真的能飞',
+    accent: '#b11226',
+  },
 ];
 
 /** 完整主体按需加载：动态 import 让每个主体成为独立 chunk，首屏只付当前那一个 */
@@ -84,6 +91,7 @@ const LOADERS: Record<string, () => Promise<Subject>> = {
   porsche911: () => import('./porsche911').then((m) => m.porsche911()),
   ps5: () => import('./ps5').then((m) => m.ps5Pro()),
   a7v: () => import('./a7v').then((m) => m.sonyA7V()),
+  roadster: () => import('./roadster').then((m) => m.roadster2()),
 };
 
 /**
@@ -104,6 +112,7 @@ const EN_LOADERS: Record<string, () => Promise<{ en: SubjectEn; meta: SubjectMet
     import('./en/porsche911').then((m) => ({ en: m.porsche911En, meta: m.porsche911MetaEn })),
   ps5: () => import('./en/ps5').then((m) => ({ en: m.ps5ProEn, meta: m.ps5ProMetaEn })),
   a7v: () => import('./en/a7v').then((m) => ({ en: m.sonyA7VEn, meta: m.sonyA7VMetaEn })),
+  roadster: () => import('./en/roadster').then((m) => ({ en: m.roadster2En, meta: m.roadster2MetaEn })),
 };
 
 /** 英文覆盖层缓存（切换语言时直接命中，不重复 import） */

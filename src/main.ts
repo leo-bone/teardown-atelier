@@ -60,6 +60,9 @@ function esc(text: string): string {
   // Porsche 911
   body: '#b9bdc2', flat6: '#8a8f93', pdk: '#767b80', wheels: '#0d0f12',
   suspension: '#7d8388', exhaust: '#8a8f93',
+  // Tesla Roadster 2
+  suction: '#2f6fa8', powertrain: '#8d9298', thrusters: '#d4621f',
+  cabin: '#2a2e33', versions: '#b11226',
 };
 
 const viewport = document.getElementById('viewport') as HTMLElement;
@@ -134,7 +137,8 @@ SUBJECT_META.forEach((s: SubjectMeta, i) => {
   card.innerHTML = `
     <span class="hc-index">0${i + 1}</span>
     <span class="hc-thumb">
-      <img class="hc-thumb-img" src="./og/thumb/${s.id}.png" alt="" loading="lazy" />
+      <img class="hc-thumb-img" src="${metaThumb(s)}" alt="${esc(s.id)}" loading="lazy"
+           onerror="thumbFallback(event)" />
     </span>
     <span class="hc-name">${esc(m.name)}</span>
     <span class="hc-sub">${esc(m.subtitle)}</span>
@@ -148,6 +152,32 @@ SUBJECT_META.forEach((s: SubjectMeta, i) => {
   heroCards.appendChild(card);
 });
 
+/**
+ * 落地卡片缩略图：先试 png，没有就退回 svg。
+ * 用 onerror 而不是硬编码扩展名——这样新增主体时不需要改代码，
+ * 也不会出现"8 个主体是 png、新主体是 svg"这种分支。
+ */
+// 内联 onerror 只能走 window
+declare global {
+  interface Window {
+    thumbFallback: (ev: Event) => void;
+  }
+}
+
+function metaThumb(m: SubjectMeta): string {
+  return `./og/thumb/${m.id}.png`;
+}
+
+/** png 404 时换svg 再试一次；仍失败就隐藏 img，避免出现破图占位 */
+function thumbFallback(ev: Event): void {
+  const img = ev.currentTarget as HTMLImageElement;
+  if (img.dataset.fallbackDone) { img.style.visibility = 'hidden'; return; }
+  img.dataset.fallbackDone = '1';
+  const id = (img.alt || '').trim();
+  img.src = `./og/thumb/${id}.svg`;
+}
+
+window.thumbFallback = thumbFallback;
 function hideHero() {
   heroEl.classList.add('hidden');
 }
@@ -179,11 +209,14 @@ function heroCap(subjectName: string, key: string, vars?: Record<string, string 
   return `${subjectName} · ${t(key, vars)}`;
 }
 /**
- * 当前主体装配态产品照（对比滑块的左图）。
- * 运行时生成的主体没有实拍照片——返回一个标记，由调用方决定回退到整体爆炸图，
- * 否则会拿到一个 404 的<img>，对比滑块左半边是空的。
+ * 当前主体装配态图（对比滑块的左图）。
+ *
+ * 优先级：主体自带 assembledImage → 内置主体的 ref/<id>/assembled.jpg → null。
+ * 返回 null 表示"没有可用的装配态图"，调用方据此禁用对比功能——
+ * 否则会拿到一个 404 的<img>，对比滑块左半边是空的，而用户不知道为什么。
  */
 function assembledHero(id: string): string | null {
+  if (current?.assembledImage) return current.assembledImage;
   const builtin = SUBJECT_META.some((m) => m.id === id);
   return builtin ? `./ref/${id}/assembled.jpg` : null;
 }
@@ -389,7 +422,9 @@ function updateShareMeta(s: Subject) {
   const ogDesc = document.querySelector('meta[property="og:description"]') as HTMLMetaElement | null;
   const ogImage = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null;
   const twImage = document.querySelector('meta[name="twitter:image"]') as HTMLMetaElement | null;
-  const imageUrl = `https://leo-bone.github.io/teardown-atelier/og/${s.id}.png`;
+  // 内置主体用 png；Roadster 这类只有示意图的用 svg
+  const ogExt = s.assembledImage?.endsWith('.svg') ? 'svg' : 'png';
+  const imageUrl = `https://leo-bone.github.io/teardown-atelier/og/${s.id}.${ogExt}`;
   if (ogTitle) ogTitle.content = `${s.name} · Teardown Atelier`;
   if (ogDesc) ogDesc.content = s.tagline;
   if (ogImage) ogImage.content = imageUrl;

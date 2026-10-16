@@ -92,6 +92,8 @@ export interface Subject {
   sectionable?: boolean;
   /** 整体爆炸图（未选中层时的中央大图）。缺省时回退到 og/<id>.png */
   heroImage?: string;
+  /** 装配态示意图（对比滑块左图）。缺省时回退到 ref/<id>/assembled.jpg；都没有则对比功能不可用 */
+  assembledImage?: string;
   /** iFixit 式可维护性 / 拆解难度评估 */
   repairability?: {
     /** 0–10，越高越易维护（iFixit 口径） */
