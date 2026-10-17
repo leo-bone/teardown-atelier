@@ -3,8 +3,8 @@
 把「输入产品名 → LLM 产出结构化拆解规格」放在服务端，**API Key 永远不进浏览器**。
 前端只在 `window.TEARDOWN_API` 指向这个 Worker 时才会启用「AI 生成真实规格」。
 
-**已部署地址：https://teardown-atelier-api.57990177.workers.dev**
-（账户 57990177@qq.com，版本见 `wrangler deployments list`）
+**已部署地址（示例）：https://teardown-atelier-api.<account>.workers.dev**
+（`<account>` 为你的 Cloudflare 账户 workers.dev 子域，版本见 `wrangler deployments list`）
 
 ---
 
@@ -38,7 +38,7 @@ node ~/.workbuddy/binaries/node/workspace/node_modules/.bin/wrangler deploy
 
 ```bash
 npm install                           # 装 wrangler
-npx wrangler login                    # 浏览器授权（本机已登录 57990177@qq.com）
+npx wrangler login                    # 浏览器授权（用你的 Cloudflare 账户登录）
 npx wrangler secret put LLM_API_KEY   # 粘贴你的 LLM 密钥  ← 唯一还缺的一步
 npm run deploy
 ```
@@ -63,7 +63,7 @@ curl -s -X POST localhost:8787/api/teardown \
 `index.html` 里已注入：
 
 ```html
-<script>window.TEARDOWN_API = 'https://teardown-atelier-api.57990177.workers.dev';</script>
+<script>window.TEARDOWN_API = 'https://teardown-atelier-api.<account>.workers.dev';</script>
 ```
 
 前端行为：
