@@ -747,9 +747,10 @@ Rocket 版变单座不是减配，是<b>空间被储气罐吃掉了</b>——这
     camera: { position: [6.8, 3.4, 7.2], target: [0, 0.5, 0] },
     explodeScale: 1.0,
     sectionable: true,
-    // 该车尚无实车照片，用结构示意图占位（并在图上明确标注"非真机"）
-    heroImage: './og/roadster.svg',
-    assembledImage: './ref/roadster/assembled.svg',
+    // 该车尚无实机照片（2028 年才投产）。以下为 AI 概念渲染图，非实拍，仅作视觉占位；
+    // 页面内容仍明确标注"无真机拆解 / 工程推断"，不把渲染图当实测照片使用。
+    heroImage: './og/roadster.png',
+    assembledImage: './ref/roadster/assembled.png',
     repairability: {
       score: 2,
       difficulty: '极难',
