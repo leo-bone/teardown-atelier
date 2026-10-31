@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@types/three": "^0.169.0",
-    "typescript": "^5.6.3",
+    "typescript": "^7.0.2",
     "vite": "^5.4.10"
   },
   "description": "交互式 3D 拆解工坊：爆炸视图 / 实时剖切 / 影棚级渲染",
