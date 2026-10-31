@@ -31,7 +31,7 @@ jobs:
       - run: npm run build
 
       # vite.config.ts 里 base:'./'，产物是相对路径，丢到任意子路径都能跑
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
